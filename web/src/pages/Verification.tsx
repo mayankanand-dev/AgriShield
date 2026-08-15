@@ -14,7 +14,14 @@ export default function Verification() {
       setCurrentPolicyId(pId);
       
       api.verifyPolicy(pId)
-        .then(res => setVerification(res.data))
+        .then(res => {
+          if (res.success) {
+            setVerification(res.data);
+          } else {
+            setVerification(null);
+          }
+        })
+        .catch(() => setVerification(null))
         .finally(() => setLoading(false));
     }).catch(() => setLoading(false));
   }, []);

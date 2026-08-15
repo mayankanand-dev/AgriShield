@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Any, Dict
 from web3 import AsyncWeb3
-from web3.middleware import SignAndSendRawMiddlewareBuilder
+from web3.middleware import SignAndSendRawMiddlewareBuilder, ExtraDataToPOAMiddleware
 from eth_account import Account
 
 from core.config import settings
@@ -46,6 +46,9 @@ async def record_hash_on_chain(canonical_hash: str) -> str:
         # Add signing middleware
         w3.middleware_onion.inject(SignAndSendRawMiddlewareBuilder.build(account), layer=0)
         
+        # Add PoA middleware
+        w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+        
         contract = w3.eth.contract(address=settings.SMART_CONTRACT_ADDRESS, abi=CONTRACT_ABI)
         
         # Build transaction
@@ -63,7 +66,8 @@ async def record_hash_on_chain(canonical_hash: str) -> str:
         
         if receipt.status == 1:
             logger.info(f"Transaction {tx_hash.hex()} successful.")
-            return tx_hash.hex()
+            hex_str = tx_hash.hex()
+            return hex_str if hex_str.startswith('0x') else f'0x{hex_str}'
         else:
             logger.error(f"Transaction {tx_hash.hex()} failed.")
             return None

@@ -16,8 +16,11 @@ export default function Policies() {
   const handleVerify = async (id: string) => {
     try {
       const res = await api.verifyPolicy(id);
+      if (!res.success) {
+        throw new Error(res.error?.message || 'Failed to verify');
+      }
       alert(`Blockchain Verification: ${res.data.status}\nHash: ${res.data.tx_hash || 'Pending...'}`);
-    } catch (e) {
+    } catch (e: any) {
       alert('Failed to verify policy on blockchain.');
     }
   };

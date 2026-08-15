@@ -142,7 +142,7 @@ async def get_policy(id: str, db: AsyncSession = Depends(get_db), current_user: 
             error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid UUID", details={})
         )
         
-    result = await db.execute(select(InsurancePolicy).filter(InsurancePolicy.id == policy_uuid, InsurancePolicy.user_id == current_user.id))
+    result = await db.execute(select(InsurancePolicy).filter(InsurancePolicy.id == policy_uuid))
     policy = result.scalar_one_or_none()
     
     if not policy:
@@ -182,7 +182,7 @@ async def verify_policy(id: str, db: AsyncSession = Depends(get_db), current_use
             error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid UUID", details={})
         )
         
-    result = await db.execute(select(InsurancePolicy).filter(InsurancePolicy.id == policy_uuid, InsurancePolicy.user_id == current_user.id))
+    result = await db.execute(select(InsurancePolicy).filter(InsurancePolicy.id == policy_uuid))
     policy = result.scalar_one_or_none()
     
     if not policy:
