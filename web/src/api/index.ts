@@ -29,6 +29,11 @@ export type Envelope<T> = {
   };
 };
 
+export type GeoPolygon = {
+  type: 'Polygon';
+  coordinates: number[][][];
+};
+
 export type Farm = {
   id: string;
   user_id: string;
@@ -37,6 +42,9 @@ export type Farm = {
   sowing_date: string | null;
   area_m2: number;
   status: 'PENDING' | 'VERIFIED' | 'UNAVAILABLE';
+  // New fields returned by backend after Phase 2 fix
+  boundary: GeoPolygon | null;
+  centroid: { lat: number; lon: number } | null;
 };
 
 export type Claim = {
@@ -52,8 +60,10 @@ export type Claim = {
 
 // Mock Data
 const MOCK_FARMS: Farm[] = [
-  { id: '1', user_id: '1', name: 'North Field', crop: 'Wheat', sowing_date: '2026-06-01', area_m2: 25000, status: 'VERIFIED' },
-  { id: '2', user_id: '1', name: 'East Plot', crop: 'Corn', sowing_date: '2026-05-15', area_m2: 12000, status: 'PENDING' },
+  { id: '1', user_id: '1', name: 'North Field', crop: 'Wheat', sowing_date: '2026-06-01', area_m2: 25000, status: 'VERIFIED',
+    centroid: { lat: 28.6139, lon: 77.2090 }, boundary: null },
+  { id: '2', user_id: '1', name: 'East Plot', crop: 'Corn', sowing_date: '2026-05-15', area_m2: 12000, status: 'PENDING',
+    centroid: { lat: 18.9220, lon: 72.8347 }, boundary: null },
 ];
 
 const MOCK_CLAIMS: Claim[] = [
@@ -66,21 +76,23 @@ export type Policy = {
   farm_id: string;
   premium_amount: number;
   coverage_amount: number;
-  status: 'ACTIVE' | 'EXPIRED' | 'PENDING';
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';  // Matches DB enum — no PENDING
   start_date: string;
   end_date: string;
+  canonical_hash?: string;
+  tx_hash?: string;
 };
 
 export type PolicyVerification = {
-  is_verified: boolean;
-  blockchain_hash: string;
-  timestamp: string;
-  network: string;
+  // Shape matches VerificationResponse in backend/schemas/insurance.py
+  canonical_hash: string | null;
+  tx_hash: string | null;
+  status: string;
 };
 
 const MOCK_POLICIES: Policy[] = [
   { id: 'p1', farm_id: '1', premium_amount: 1500, coverage_amount: 25000, status: 'ACTIVE', start_date: '2026-01-01', end_date: '2026-12-31' },
-  { id: 'p2', farm_id: '2', premium_amount: 800, coverage_amount: 12000, status: 'PENDING', start_date: '2026-06-01', end_date: '2027-05-31' },
+  { id: 'p2', farm_id: '2', premium_amount: 800, coverage_amount: 12000, status: 'CANCELLED', start_date: '2026-06-01', end_date: '2027-05-31' },
 ];
 
 function createMockResponse<T>(data: T): Envelope<T> {
@@ -170,13 +182,92 @@ export const api = {
   verifyPolicy: async (id: string): Promise<Envelope<PolicyVerification>> => {
     if (IS_DEMO) {
       return createMockResponse({
-        is_verified: true,
-        blockchain_hash: `0x${Math.random().toString(16).substring(2, 15).padEnd(64, '0')}`,
-        timestamp: new Date().toISOString(),
-        network: 'Polygon Mumbai'
+        canonical_hash: `a3f${Math.random().toString(16).substring(2, 60)}`,
+        tx_hash: `0x${Math.random().toString(16).substring(2, 42)}`,
+        status: 'VERIFIED',
       });
     }
     const res = await apiClient.get(`/insurance/policies/${id}/verification`);
     return res.data;
-  }
+  },
+
+  // ─── AI Proxy routes ───────────────────────────────────────────────────
+
+  assessClaim: async (id: string): Promise<Envelope<any>> => {
+    if (IS_DEMO) return createMockResponse({
+      id, status: 'AI_ASSESSED', damage_pct: 0.28,
+      ai_confidence: 0.87, model_version: 'mock-damage-v1', tx_hash: '0xabc123'
+    });
+    const res = await apiClient.post(`/claims/${id}/assess`);
+    return res.data;
+  },
+
+  getFarmYield: async (farmId: string): Promise<Envelope<any>> => {
+    if (IS_DEMO) return createMockResponse({
+      yield_value: 3200, unit: 'kg/ha', confidence: 0.82,
+      model_version: 'mock-v1', low_confidence: false
+    });
+    const res = await apiClient.post(`/farms/${farmId}/yield-predict`);
+    return res.data;
+  },
+
+  getFarmRisk: async (farmId: string): Promise<Envelope<any>> => {
+    if (IS_DEMO) return createMockResponse({
+      risk_score: 0.35, risk_band: 'medium', factors: [],
+      confidence: 0.88, model_version: 'mock-v1'
+    });
+    const res = await apiClient.post(`/farms/${farmId}/risk-score`);
+    return res.data;
+  },
+
+  getFarmAdvisory: async (farmId: string): Promise<Envelope<any>> => {
+    if (IS_DEMO) return createMockResponse({
+      recommendations: ['Apply balanced NPK', 'Monitor crop weekly'],
+      warnings: [], model_version: 'mock-v1'
+    });
+    const res = await apiClient.post(`/farms/${farmId}/advisory`);
+    return res.data;
+  },
+
+  getFarmWeather: async (farmId: string): Promise<Envelope<any>> => {
+    if (IS_DEMO) return createMockResponse({
+      temperature_celsius: 28, wind_speed_kmh: 12,
+      condition: 'Clear', timestamp: new Date().toISOString()
+    });
+    const res = await apiClient.get(`/farms/${farmId}/weather/current`);
+    return res.data;
+  },
+
+  createClaim: async (claim: {
+    policy_id: string;
+    incident_date: string;
+    event_type: string;
+    description: string;
+    evidence_ids: string[];
+  }): Promise<Envelope<any>> => {
+    const idempotencyKey = crypto.randomUUID();
+    if (IS_DEMO) return createMockResponse({ id: idempotencyKey, status: 'SUBMITTED' });
+    const res = await apiClient.post('/claims', claim, {
+      headers: { 'Idempotency-Key': idempotencyKey }
+    });
+    return res.data;
+  },
+
+  markNotificationRead: async (id: string): Promise<Envelope<any>> => {
+    if (IS_DEMO) return createMockResponse({ id, is_read: true });
+    const res = await apiClient.post(`/notifications/${id}/read`);
+    return res.data;
+  },
+
+  // ─── Cache invalidation ────────────────────────────────────────────────
+
+  invalidateCache: (key?: 'farms' | 'claims' | 'policies') => {
+    if (key) {
+      api._cache[key] = null;
+    } else {
+      api._cache.farms = null;
+      api._cache.claims = null;
+      api._cache.policies = null;
+    }
+  },
 };

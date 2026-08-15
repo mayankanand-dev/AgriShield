@@ -6,7 +6,7 @@ import '../repositories/claim_repository.dart';
 
 // Change to ApiFarmRepository in production
 final farmRepositoryProvider = Provider<FarmRepository>((ref) {
-  return LocalMockFarmRepository();
+  return ApiFarmRepository(ApiClient());
 });
 
 final farmsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
@@ -21,10 +21,10 @@ final farmsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
 
 final insuranceRepositoryProvider = Provider<InsuranceRepository>((ref) {
   // Change to ApiInsuranceRepository in production
-  return LocalMockInsuranceRepository();
+  return ApiInsuranceRepository();
 });
 
 final claimRepositoryProvider = Provider<ClaimRepository>((ref) {
   // Change to ApiClaimRepository in production
-  return LocalMockClaimRepository();
+  return ApiClaimRepository();
 });

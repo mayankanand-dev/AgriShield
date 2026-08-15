@@ -10,6 +10,7 @@ from schemas.contract import Envelope, EnvelopeMeta, EnvelopeError
 from db.session import get_db
 from db.models import Claim, ClaimStatus, Farm
 from services.blockchain_service import generate_tamper_proof_hash, record_hash_on_chain
+from services.ai_client import get_ai_client
 
 router = APIRouter()
 
@@ -118,11 +119,11 @@ async def assess_claim(id: str, db: AsyncSession = Depends(get_db)):
         claim_uuid = uuid.UUID(id)
     except ValueError:
         return Envelope(
-            success=False, data=None, 
+            success=False, data=None,
             meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
             error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid UUID")
         )
-        
+
     claim = await db.get(Claim, claim_uuid)
     if not claim:
         return Envelope(
@@ -130,32 +131,51 @@ async def assess_claim(id: str, db: AsyncSession = Depends(get_db)):
             meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
             error=EnvelopeError(code="NOT_FOUND", message="Claim not found")
         )
-        
-    # Simulate AI Assessment
+
+    # Call AI service for real damage assessment
+    ai_client = get_ai_client()
+    try:
+        # Minimal placeholder image bytes — real implementation would load evidence files
+        _placeholder = bytes([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10])
+        ai_result = await ai_client.get_damage_assessment(
+            image_bytes=_placeholder,
+            crop="unknown",
+            event_type=claim.event_type or "other",
+        )
+    except Exception as ai_err:
+        return Envelope(
+            success=False, data=None,
+            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+            error=EnvelopeError(code="AI_UNAVAILABLE", message=str(ai_err))
+        )
+
     claim.status = ClaimStatus.AI_ASSESSED
-    claim.damage_pct = 0.45
-    claim.ai_confidence = 0.92
-    
+    claim.damage_pct = ai_result.get("damage_pct", 0.0)
+    claim.ai_confidence = ai_result.get("confidence", 0.0)
+
     payload = {
         "claim_id": str(claim.id),
         "policy_id": str(claim.policy_id),
         "damage_pct": claim.damage_pct,
-        "ai_confidence": claim.ai_confidence
+        "ai_confidence": claim.ai_confidence,
+        "model_version": ai_result.get("model_version", "unknown"),
     }
     canonical_hash = generate_tamper_proof_hash(payload)
     claim.canonical_hash = canonical_hash
     claim.tx_hash = await record_hash_on_chain(canonical_hash)
-    
+
     await db.commit()
     await db.refresh(claim)
-    
+
     return Envelope(
         success=True,
         data={
-            "id": str(claim.id), 
-            "status": claim.status.value, 
+            "id": str(claim.id),
+            "status": claim.status.value,
             "damage_pct": claim.damage_pct,
-            "ai_confidence": claim.ai_confidence
+            "ai_confidence": claim.ai_confidence,
+            "model_version": ai_result.get("model_version"),
+            "tx_hash": claim.tx_hash,
         },
         meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
         error=None

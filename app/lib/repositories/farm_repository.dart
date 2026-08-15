@@ -1,5 +1,7 @@
 import '../api/api_client.dart';
 import '../models/envelope.dart';
+import '../models/envelope.dart';
+import 'offline_queue.dart';
 
 abstract class FarmRepository {
   Future<Envelope<List<Map<String, dynamic>>>> getFarms();
@@ -17,8 +19,20 @@ class ApiFarmRepository implements FarmRepository {
   }
 
   @override
-  Future<Envelope<Map<String, dynamic>>> createFarm(Map<String, dynamic> data) {
-    return client.post('/farms', data, (data) => data as Map<String, dynamic>);
+  Future<Envelope<Map<String, dynamic>>> createFarm(Map<String, dynamic> data) async {
+    final response = await client.post('/farms', data, (data) => data as Map<String, dynamic>);
+    
+    // If network error, add to offline queue
+    if (!response.success && response.error?.code == 'NETWORK_ERROR') {
+      final queue = OfflineQueue();
+      await queue.enqueue('POST_FARM', data);
+      return Envelope(
+        success: true,
+        data: data..addAll({'status': 'PENDING_SYNC', 'id': 'temp_${DateTime.now().millisecondsSinceEpoch}'}),
+        meta: EnvelopeMeta(requestId: 'offline', timestamp: DateTime.now().toIso8601String()),
+      );
+    }
+    return response;
   }
 }
 

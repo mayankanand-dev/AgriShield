@@ -1,8 +1,8 @@
-import { FileText, ShieldAlert, Users, Activity, Download, TrendingUp, TrendingDown, Map as MapIcon } from 'lucide-react';
+import { FileText, ShieldAlert, Users, Activity, Download, TrendingUp, TrendingDown } from 'lucide-react';
 import { api } from '../api';
 import type { Farm } from '../api';
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -84,31 +84,41 @@ export default function Dashboard() {
               <h3 className="text-lg font-bold text-on-background">Geographic Risk Distribution</h3>
             </div>
             <div className="flex-1 relative z-0">
-              <MapContainer center={[38.0, -97.0]} zoom={4} className="w-full h-full">
+              <MapContainer center={[20.5937, 78.9629]} zoom={5} className="w-full h-full">
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 />
-                {farms.map((farm, index) => {
-                  const lat = 38.0 + (index * 2);
-                  const lng = -97.0 + (index * 2);
-                  const leafletCoords: [number, number][] = [
-                    [lat - 0.5, lng - 0.5],
-                    [lat + 0.5, lng - 0.5],
-                    [lat + 0.5, lng + 0.5],
-                    [lat - 0.5, lng + 0.5]
-                  ];
-                  return (
-                    <Polygon 
-                      key={farm.id}
-                      positions={leafletCoords} 
-                      pathOptions={{ 
-                        color: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
-                        fillColor: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
-                        fillOpacity: 0.4
-                      }} 
-                    />
-                  );
+                {farms.map((farm) => {
+                  const color = farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F';
+
+                  // Prefer real polygon boundary from backend
+                  if (farm.boundary?.coordinates) {
+                    // GeoJSON coords are [lon, lat] — Leaflet needs [lat, lon]
+                    const positions: [number, number][] = farm.boundary.coordinates[0]
+                      .map(([lon, lat]) => [lat, lon] as [number, number]);
+                    return (
+                      <Polygon
+                        key={farm.id}
+                        positions={positions}
+                        pathOptions={{ color, fillColor: color, fillOpacity: 0.4 }}
+                      />
+                    );
+                  }
+
+                  // Fallback: point marker at centroid
+                  if (farm.centroid) {
+                    return (
+                      <CircleMarker
+                        key={farm.id}
+                        center={[farm.centroid.lat, farm.centroid.lon]}
+                        radius={10}
+                        pathOptions={{ color, fillColor: color, fillOpacity: 0.6 }}
+                      />
+                    );
+                  }
+
+                  return null;
                 })}
               </MapContainer>
             </div>

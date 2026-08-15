@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/envelope.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
   // Using the local PC IP address so both Android Emulator and Physical devices can connect
   final String baseUrl;
+  final _storage = const FlutterSecureStorage();
 
   ApiClient({this.baseUrl = "http://172.25.232.27:8000/api/v1"});
 
   Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
+    final token = await _storage.read(key: 'access_token');
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',

@@ -20,7 +20,7 @@ export default function FarmsMap() {
     api.getFarms().then(res => setFarms(res.data));
   }, []);
 
-  const center: [number, number] = [38.0, -97.0]; // Default center (US)
+  const center: [number, number] = [20.5937, 78.9629]; // Default center (India)
 
   return (
     <div className="flex-1 flex flex-col h-full bg-surface">
@@ -37,36 +37,37 @@ export default function FarmsMap() {
       </div>
       
       <div className="flex-1 relative z-0">
-        <MapContainer center={center} zoom={4} className="w-full h-full">
+        <MapContainer center={center} zoom={5} className="w-full h-full">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
           
-          {farms.map((farm, index) => {
-            // Assign some random-ish coordinates for demo based on index
-            const lat = 38.0 + (index * 2);
-            const lng = -97.0 + (index * 2);
-            const position: [number, number] = [lat, lng];
-            
-            // Simple square polygon for demo
-            const leafletCoords: [number, number][] = [
-              [lat - 0.5, lng - 0.5],
-              [lat + 0.5, lng - 0.5],
-              [lat + 0.5, lng + 0.5],
-              [lat - 0.5, lng + 0.5]
-            ];
+          {farms.map((farm) => {
+            let position: [number, number] | null = null;
+            let leafletCoords: [number, number][] | null = null;
+
+            if (farm.centroid) {
+              position = [farm.centroid.lat, farm.centroid.lon];
+            }
+            if (farm.boundary && farm.boundary.coordinates && farm.boundary.coordinates[0]) {
+              leafletCoords = farm.boundary.coordinates[0].map(([lon, lat]) => [lat, lon]);
+            }
+
+            if (!position) return null;
 
             return (
               <div key={farm.id}>
-                <Polygon 
-                  positions={leafletCoords} 
-                  pathOptions={{ 
-                    color: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
-                    fillColor: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
-                    fillOpacity: 0.4
-                  }} 
-                />
+                {leafletCoords && (
+                  <Polygon 
+                    positions={leafletCoords} 
+                    pathOptions={{ 
+                      color: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
+                      fillColor: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
+                      fillOpacity: 0.4
+                    }} 
+                  />
+                )}
                 <Marker position={position}>
                   <Popup>
                     <div className="p-1">

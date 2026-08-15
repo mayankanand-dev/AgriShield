@@ -1,4 +1,4 @@
-import { FileSearch, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { api } from '../api';
 import { useEffect, useState } from 'react';
 import type { Claim } from '../api';
@@ -16,11 +16,28 @@ export default function Claims() {
   const handleReview = async (id: string, action: 'APPROVE' | 'REJECT') => {
     try {
       await api.reviewClaim(id, action);
-      setClaims(prev => prev.map(c => c.id === id ? { ...c, status: action } : c));
-      api._cache.claims = null; // invalidate cache
+      // Map action verbs to past-tense status values
+      const newStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+      setClaims(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+      api.invalidateCache('claims');
       alert(`Claim ${action.toLowerCase()}d successfully.`);
     } catch (e) {
       alert(`Failed to ${action.toLowerCase()} claim.`);
+    }
+  };
+
+  const handleAssess = async (id: string) => {
+    try {
+      const res = await api.assessClaim(id);
+      setClaims(prev => prev.map(c =>
+        c.id === id
+          ? { ...c, status: 'AI_ASSESSED', damage_pct: res.data.damage_pct, ai_confidence: res.data.ai_confidence }
+          : c
+      ));
+      api.invalidateCache('claims');
+      alert(`AI Assessment complete. Damage: ${(res.data.damage_pct * 100).toFixed(0)}% (${res.data.model_version})`);
+    } catch (e) {
+      alert('AI Assessment failed.');
     }
   };
 
@@ -85,6 +102,15 @@ export default function Claims() {
                       <td className="px-6 py-4 text-right">
                         {claim.status === 'APPROVED' || claim.status === 'REJECTED' ? (
                           <span className="text-on-surface-variant text-xs font-semibold">Reviewed</span>
+                        ) : claim.status === 'SUBMITTED' ? (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleAssess(claim.id)}
+                              className="bg-tertiary/10 text-tertiary border border-tertiary/30 px-2 py-1 rounded text-xs font-bold hover:bg-tertiary/20 transition-colors"
+                            >
+                              Assess AI
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex justify-end gap-3">
                             <button onClick={() => handleReview(claim.id, 'APPROVE')} className="text-primary hover:text-primary-container font-bold transition-colors text-xs">

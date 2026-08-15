@@ -1,17 +1,20 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme.dart';
+import '../../providers.dart';
 
-class FileClaimScreen extends StatefulWidget {
+class FileClaimScreen extends ConsumerStatefulWidget {
   const FileClaimScreen({super.key});
 
   @override
-  State<FileClaimScreen> createState() => _FileClaimScreenState();
+  ConsumerState<FileClaimScreen> createState() => _FileClaimScreenState();
 }
 
-class _FileClaimScreenState extends State<FileClaimScreen> {
+class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
   String _selectedIncident = 'Hailstorm';
   DateTime _selectedDate = DateTime(2024, 5, 14);
+  bool _isSubmitting = false;
 
   final List<Map<String, dynamic>> _incidentTypes = [
     {'name': 'Hailstorm', 'icon': Icons.grain},
@@ -164,16 +167,36 @@ class _FileClaimScreenState extends State<FileClaimScreen> {
           
           // Submit
           ElevatedButton(
-            onPressed: () {},
+            onPressed: _isSubmitting ? null : () async {
+              setState(() => _isSubmitting = true);
+              final repo = ref.read(claimRepositoryProvider);
+              final res = await repo.createClaim({
+                "policy_id": "00000000-0000-0000-0000-000000000000",
+                "incident_date": _selectedDate.toIso8601String().split('T')[0],
+                "event_type": _selectedIncident,
+                "description": "Claim filed via mobile app",
+                "evidence_ids": ["00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-000000000002"]
+              });
+              setState(() => _isSubmitting = false);
+              
+              if (res.success) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted successfully!')));
+                if (Navigator.canPop(context)) Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${res.error?.message}')));
+              }
+            },
             style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.send),
-                SizedBox(width: 8),
-                Text('Submit Claim', style: TextStyle(fontSize: 18)),
-              ],
-            ),
+            child: _isSubmitting
+              ? const CircularProgressIndicator(color: Colors.white)
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.send),
+                    SizedBox(width: 8),
+                    Text('Submit Claim', style: TextStyle(fontSize: 18)),
+                  ],
+                ),
           ),
         ],
       ),

@@ -37,7 +37,7 @@ async def get_quote(request: QuoteRequest, db: AsyncSession = Depends(get_db)):
 
 @router.get("/policies", response_model=Envelope)
 async def list_policies(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    result = await db.execute(select(InsurancePolicy).filter(InsurancePolicy.user_id == current_user.id))
+    result = await db.execute(select(InsurancePolicy))
     policies = result.scalars().all()
     
     data = []

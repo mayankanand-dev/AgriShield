@@ -25,7 +25,7 @@ class EnvelopeMeta(BaseModel):
 class EnvelopeError(BaseModel):
     code: str
     message: str
-    details: dict
+    details: Optional[dict] = None
 
 class Envelope(BaseModel):
     success: bool
