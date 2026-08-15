@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     AI_MODE: str = "mock" # mock | live
     MOCK_MODE: bool = True
     
+    # Blockchain
+    POLYGON_RPC_URL: str = "https://polygon-amoy.g.alchemy.com/v2/alch_Agu4ZKjaz7YRPE2ELTzIK"
+    POLYGON_PRIVATE_KEY: str = "40b5ad267a0986e3336dd511e0feb85bd73acb2eab1163c93c25d840970629c4"
+    SMART_CONTRACT_ADDRESS: str = "0x479c319C22928FF293713e70F24d399220d46876"
+    
     class Config:
         env_file = ".env"
 

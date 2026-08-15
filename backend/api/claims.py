@@ -9,6 +9,7 @@ from sqlalchemy.future import select
 from schemas.contract import Envelope, EnvelopeMeta, EnvelopeError
 from db.session import get_db
 from db.models import Claim, ClaimStatus, Farm
+from services.blockchain_service import generate_tamper_proof_hash, record_hash_on_chain
 
 router = APIRouter()
 
@@ -128,6 +129,16 @@ async def assess_claim(id: str, db: AsyncSession = Depends(get_db)):
     claim.damage_pct = 0.45
     claim.ai_confidence = 0.92
     
+    payload = {
+        "claim_id": str(claim.id),
+        "policy_id": str(claim.policy_id),
+        "damage_pct": claim.damage_pct,
+        "ai_confidence": claim.ai_confidence
+    }
+    canonical_hash = generate_tamper_proof_hash(payload)
+    claim.canonical_hash = canonical_hash
+    claim.tx_hash = await record_hash_on_chain(canonical_hash)
+    
     await db.commit()
     await db.refresh(claim)
     
@@ -138,6 +149,36 @@ async def assess_claim(id: str, db: AsyncSession = Depends(get_db)):
             "status": claim.status.value, 
             "damage_pct": claim.damage_pct,
             "ai_confidence": claim.ai_confidence
+        },
+        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+        error=None
+    )
+
+@router.get("/{id}/verification", response_model=Envelope)
+async def verify_claim(id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        claim_uuid = uuid.UUID(id)
+    except ValueError:
+        return Envelope(
+            success=False, data=None, 
+            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+            error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid UUID")
+        )
+        
+    claim = await db.get(Claim, claim_uuid)
+    if not claim:
+        return Envelope(
+            success=False, data=None,
+            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+            error=EnvelopeError(code="NOT_FOUND", message="Claim not found")
+        )
+        
+    return Envelope(
+        success=True,
+        data={
+            "canonical_hash": claim.canonical_hash,
+            "tx_hash": claim.tx_hash,
+            "status": "VERIFIED" if claim.tx_hash else "PENDING"
         },
         meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
         error=None

@@ -17,3 +17,4 @@ pyproj>=3.5.0
 httpx>=0.24.0
 
 alembic>=1.11.0
+web3>=6.0.0

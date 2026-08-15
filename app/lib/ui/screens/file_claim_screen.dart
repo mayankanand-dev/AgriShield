@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../theme.dart';
 
 class FileClaimScreen extends StatefulWidget {
   const FileClaimScreen({super.key});
@@ -8,85 +10,188 @@ class FileClaimScreen extends StatefulWidget {
 }
 
 class _FileClaimScreenState extends State<FileClaimScreen> {
-  String? _selectedEvent;
+  String _selectedIncident = 'Hailstorm';
+  DateTime _selectedDate = DateTime(2024, 5, 14);
+
+  final List<Map<String, dynamic>> _incidentTypes = [
+    {'name': 'Hailstorm', 'icon': Icons.grain},
+    {'name': 'Drought', 'icon': Icons.wb_sunny},
+    {'name': 'Flood', 'icon': Icons.flood},
+    {'name': 'Pest Attack', 'icon': Icons.bug_report},
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('File a Claim')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('What happened?', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8.0,
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AppBar(
+              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              elevation: 0,
+              iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
+              title: const Text('Insurance', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
+            ),
+          ),
+        ),
+      ),
+      body: ListView(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 76,
+          left: 16, right: 16, bottom: 24,
+        ),
+        children: [
+          // Instruction
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AgriShieldTheme.primaryContainer.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildChoiceChip('Hailstorm', Icons.ac_unit),
-                _buildChoiceChip('Drought', Icons.wb_sunny),
-                _buildChoiceChip('Flood', Icons.water),
-                _buildChoiceChip('Pest', Icons.bug_report),
+                const Icon(Icons.info, color: AgriShieldTheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text('File a Crop Damage Claim', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
+                      SizedBox(height: 4),
+                      Text('Please select the incident type and upload at least 2 clear photos of the affected area.', style: TextStyle(fontSize: 14, color: AgriShieldTheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text('When did it happen?', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.calendar_today),
-              label: const Text('Select Date'),
-            ),
-            const SizedBox(height: 24),
-            const Text('Evidence Photos', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Container(
-              height: 120,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey, style: BorderStyle.solid),
-                borderRadius: BorderRadius.circular(8.0),
+          ),
+          const SizedBox(height: 24),
+          
+          // Incident Type
+          const Text('Select Incident Type', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.5),
+            itemCount: _incidentTypes.length,
+            itemBuilder: (context, index) {
+              final incident = _incidentTypes[index];
+              final isSelected = _selectedIncident == incident['name'];
+              return InkWell(
+                onTap: () => setState(() => _selectedIncident = incident['name']),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected ? AgriShieldTheme.primaryContainer.withOpacity(0.2) : AgriShieldTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: isSelected ? AgriShieldTheme.primary : AgriShieldTheme.surfaceVariant, width: isSelected ? 2 : 1),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: isSelected ? AgriShieldTheme.primary.withOpacity(0.1) : AgriShieldTheme.surfaceVariant, shape: BoxShape.circle),
+                        child: Icon(incident['icon'], color: isSelected ? AgriShieldTheme.primary : AgriShieldTheme.onSurfaceVariant, size: 28),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(incident['name'], style: TextStyle(fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurface)),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          
+          // Date Picker
+          const Text('Date of Incident', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () async {
+              final date = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime.now());
+              if (date != null) setState(() => _selectedDate = date);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(color: AgriShieldTheme.surface, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)]),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('${_selectedDate.toLocal()}'.split(' ')[0], style: const TextStyle(fontSize: 18, color: AgriShieldTheme.onSurface)),
+                  const Icon(Icons.calendar_month, color: AgriShieldTheme.onSurfaceVariant),
+                ],
               ),
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_a_photo, size: 32, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text('Tap to upload photos')
-                  ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Evidence
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Text('Upload Evidence Photos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
+              Text('1 of 3 minimum', style: TextStyle(fontSize: 12, color: AgriShieldTheme.onSurfaceVariant)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 100,
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), image: const DecorationImage(image: NetworkImage('https://picsum.photos/200'), fit: BoxFit.cover)),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 4, right: 4,
+                        child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), shape: BoxShape.circle), child: const Icon(Icons.close, size: 16, color: AgriShieldTheme.error)),
+                      )
+                    ],
+                  ),
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(child: _buildAddPhotoBtn()),
+              const SizedBox(width: 12),
+              Expanded(child: _buildAddPhotoBtn()),
+            ],
+          ),
+          const SizedBox(height: 48),
+          
+          // Submit
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.send),
+                SizedBox(width: 8),
+                Text('Submit Claim', style: TextStyle(fontSize: 18)),
+              ],
             ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _selectedEvent != null ? () {} : null,
-              child: const Text('Submit Claim'),
-            )
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildChoiceChip(String label, IconData icon) {
-    final selected = _selectedEvent == label;
-    final colorScheme = Theme.of(context).colorScheme;
-    return ChoiceChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: selected ? colorScheme.onPrimary : colorScheme.onSurface),
-          const SizedBox(width: 4),
-          Text(label),
+  Widget _buildAddPhotoBtn() {
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withOpacity(0.5), borderRadius: BorderRadius.circular(12), border: Border.all(color: AgriShieldTheme.surfaceVariant, style: BorderStyle.solid)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.add_a_photo, color: AgriShieldTheme.primary, size: 28),
+          SizedBox(height: 4),
+          Text('Add Photo', style: TextStyle(fontSize: 12, color: AgriShieldTheme.primary, fontWeight: FontWeight.w600)),
         ],
       ),
-      selected: selected,
-      onSelected: (val) {
-        setState(() => _selectedEvent = val ? label : null);
-      },
-      selectedColor: colorScheme.primary,
-      labelStyle: TextStyle(color: selected ? colorScheme.onPrimary : colorScheme.onSurface),
     );
   }
 }

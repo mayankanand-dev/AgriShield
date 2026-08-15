@@ -13,6 +13,11 @@ class FarmStatus(str, enum.Enum):
     VERIFIED = "VERIFIED"
     UNAVAILABLE = "UNAVAILABLE"
 
+class PolicyStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
+
 class User(Base):
     __tablename__ = "users"
     
@@ -66,3 +71,23 @@ class Claim(Base):
     tx_hash = Column(String, nullable=True)
     
     farm = relationship("Farm", back_populates="claims")
+
+class InsurancePolicy(Base):
+    __tablename__ = "insurance_policies"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    farm_id = Column(UUID(as_uuid=True), ForeignKey("farms.id"))
+    
+    premium_amount = Column(Float)
+    coverage_amount = Column(Float)
+    
+    canonical_hash = Column(String, nullable=True)
+    tx_hash = Column(String, nullable=True)
+    
+    status = Column(SQLEnum(PolicyStatus), default=PolicyStatus.ACTIVE)
+    
+    created_at = Column(DateTime, default=func.now())
+    
+    user = relationship("User")
+    farm = relationship("Farm")

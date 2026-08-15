@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../theme.dart';
 
 class AddFarmScreen extends StatefulWidget {
   const AddFarmScreen({super.key});
@@ -14,11 +16,42 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
   
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Farm Boundary'),
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AppBar(
+              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              elevation: 0,
+              iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
+              title: const Text(
+                'Farms',
+                style: TextStyle(
+                  color: AgriShieldTheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.translate, color: AgriShieldTheme.onSurfaceVariant),
+                  onPressed: () {},
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: AgriShieldTheme.primaryContainer,
+                    child: const Icon(Icons.person, size: 20, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -39,62 +72,164 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
               ),
               if (_polygonPoints.isNotEmpty)
                 PolygonLayer(
-                  polygons: [
-                    Polygon(
+                  polygons: <Polygon<Object>>[
+                    Polygon<Object>(
                       points: _polygonPoints,
-                      color: colorScheme.primary.withOpacity(0.3),
-                      borderColor: colorScheme.primary,
+                      color: AgriShieldTheme.primary.withOpacity(0.3),
+                      borderColor: AgriShieldTheme.primary,
                       borderStrokeWidth: 3,
-                      isFilled: true,
                     ),
                   ],
                 ),
               MarkerLayer(
                 markers: _polygonPoints.map((point) => Marker(
                   point: point,
-                  width: 12,
-                  height: 12,
+                  width: 16,
+                  height: 16,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: colorScheme.secondary,
+                      color: AgriShieldTheme.surfaceContainerLowest,
                       shape: BoxShape.circle,
+                      border: Border.all(color: AgriShieldTheme.primary, width: 4),
                     ),
                   ),
                 )).toList(),
               ),
             ],
           ),
+          // Top Instructions Pill
           Positioned(
-            bottom: 24,
+            top: MediaQuery.of(context).padding.top + 76,
             left: 24,
             right: 24,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Vertices: ${_polygonPoints.length}', style: Theme.of(context).textTheme.titleMedium),
-                        TextButton.icon(
-                          onPressed: () => setState(() => _polygonPoints.clear()),
-                          icon: const Icon(Icons.clear),
-                          label: const Text('Clear'),
-                          style: TextButton.styleFrom(foregroundColor: colorScheme.error),
-                        )
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AgriShieldTheme.surface.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.directions_walk, color: AgriShieldTheme.primary, size: 20),
+                          const SizedBox(width: 8),
+                          const Text('Walk boundary or tap', style: TextStyle(fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurface)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Crosshair
+          const Center(
+            child: Icon(Icons.my_location, size: 40, color: AgriShieldTheme.primary),
+          ),
+          // Floating Bottom Action Card
+          Positioned(
+            bottom: 24,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AgriShieldTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.straighten, size: 16, color: AgriShieldTheme.onSurfaceVariant),
+                              const SizedBox(width: 4),
+                              const Text('Calculated Area', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AgriShieldTheme.onSurfaceVariant)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: (_polygonPoints.length * 0.5).toStringAsFixed(1),
+                                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary, fontFamily: 'Inter'),
+                                ),
+                                const TextSpan(
+                                  text: ' Hectares',
+                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurfaceVariant, fontFamily: 'Inter'),
+                                )
+                              ]
+                            )
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () {
+                          if (_polygonPoints.isNotEmpty) {
+                            setState(() => _polygonPoints.removeLast());
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AgriShieldTheme.secondaryContainer.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.undo, color: AgriShieldTheme.secondaryContainer),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _polygonPoints.length >= 3 ? () {
+                      double mockAreaHectares = _polygonPoints.length * 0.5;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Farm boundary saved! Area: ${mockAreaHectares.toStringAsFixed(1)} ha')),
+                      );
+                      if (Navigator.canPop(context)) {
+                        Navigator.of(context).pop();
+                      } else {
+                        setState(() {
+                          _polygonPoints.clear();
+                        });
+                      }
+                    } : null,
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.check_circle),
+                        SizedBox(width: 8),
+                        Text('Save Boundary'),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _polygonPoints.length >= 3 ? () {
-                        // Validate and Save logic
-                      } : null,
-                      child: const Text('Save Boundary'),
-                    )
-                  ],
-                ),
+                  )
+                ],
               ),
             ),
           )

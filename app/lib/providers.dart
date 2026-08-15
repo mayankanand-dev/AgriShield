@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/farm_repository.dart';
 import '../api/api_client.dart';
+import '../repositories/insurance_repository.dart';
+import '../repositories/claim_repository.dart';
 
 // Change to ApiFarmRepository in production
 final farmRepositoryProvider = Provider<FarmRepository>((ref) {
@@ -15,4 +17,14 @@ final farmsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   } else {
     throw Exception(response.error?.message ?? "Failed to load farms");
   }
+});
+
+final insuranceRepositoryProvider = Provider<InsuranceRepository>((ref) {
+  // Change to ApiInsuranceRepository in production
+  return LocalMockInsuranceRepository();
+});
+
+final claimRepositoryProvider = Provider<ClaimRepository>((ref) {
+  // Change to ApiClaimRepository in production
+  return LocalMockClaimRepository();
 });
