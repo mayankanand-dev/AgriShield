@@ -13,7 +13,17 @@ export default function Login() {
     setError('');
     
     try {
-      await api.login({ identifier: 'admin', password: 'password123' });
+      const form = e.target as HTMLFormElement;
+      const email = (form.elements[0] as HTMLInputElement).value;
+      const password = (form.elements[1] as HTMLInputElement).value;
+      
+      const res = await api.login({ identifier: email, password });
+      
+      // Store token
+      if (res && res.data && res.data.access_token) {
+        localStorage.setItem('access_token', res.data.access_token);
+      }
+      
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed');
@@ -74,10 +84,11 @@ export default function Login() {
           </button>
         </form>
         
-        <div className="mt-8 text-center text-xs text-on-surface-variant font-medium bg-tertiary-container/30 text-tertiary p-3 rounded-lg border border-tertiary/20 mb-4">
-          Demo Mode is active. Any credentials will work.
-        </div>
-        
+        {import.meta.env.VITE_DEMO_MODE === 'true' && (
+          <div className="mt-8 text-center text-xs text-on-surface-variant font-medium bg-tertiary-container/30 text-tertiary p-3 rounded-lg border border-tertiary/20 mb-4">
+            Demo Mode is active. Any credentials will work.
+          </div>
+        )}
         <div className="text-center text-sm text-on-surface-variant">
           Don't have an account? <Link to="/register" className="text-primary font-bold hover:underline">Register</Link>
         </div>

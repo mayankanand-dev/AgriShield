@@ -21,15 +21,16 @@ class CreateFarmRequest(BaseModel):
     boundary: GeoPolygon
 
 @router.get("", response_model=Envelope)
-async def list_farms(page: int = 1, page_size: int = 20, db: AsyncSession = Depends(get_db)):
-    # Query all farms
-    result = await db.execute(select(Farm).order_by(Farm.name))
+async def list_farms(page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
+    offset = (page - 1) * page_size
+    result = await db.execute(select(Farm).order_by(Farm.name, Farm.id).limit(page_size).offset(offset))
     farms = result.scalars().all()
     
     farms_list = []
     for f in farms:
         farms_list.append({
             "id": str(f.id),
+            "user_id": str(f.user_id),
             "name": f.name,
             "crop": f.crop,
             "area_m2": f.area_m2,

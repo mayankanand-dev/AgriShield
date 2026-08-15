@@ -13,6 +13,15 @@ export default function Policies() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleVerify = async (id: string) => {
+    try {
+      const res = await api.verifyPolicy(id);
+      alert(`Blockchain Verification: ${res.data.status}\nHash: ${res.data.tx_hash || 'Pending...'}`);
+    } catch (e) {
+      alert('Failed to verify policy on blockchain.');
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col min-w-0">
             <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-6">
@@ -66,7 +75,7 @@ export default function Policies() {
                   <div className="text-xs text-on-surface-variant">
                     {policy.start_date} to {policy.end_date}
                   </div>
-                  <button className="text-tertiary hover:text-tertiary-container font-semibold transition-colors flex items-center gap-1 text-sm">
+                  <button onClick={() => handleVerify(policy.id)} className="text-tertiary hover:text-tertiary-container font-semibold transition-colors flex items-center gap-1 text-sm">
                     Verify <Shield size={16} />
                   </button>
                 </div>

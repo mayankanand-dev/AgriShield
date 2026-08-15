@@ -20,9 +20,13 @@ class CreateClaimRequest(BaseModel):
     description: str
     evidence_ids: list[str]
 
+class ReviewClaimRequest(BaseModel):
+    action: str
+
 @router.get("", response_model=Envelope)
-async def list_claims(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Claim).order_by(Claim.incident_date.desc()))
+async def list_claims(page: int = 1, page_size: int = 50, db: AsyncSession = Depends(get_db)):
+    offset = (page - 1) * page_size
+    result = await db.execute(select(Claim).order_by(Claim.incident_date.desc(), Claim.id).limit(page_size).offset(offset))
     claims = result.scalars().all()
     
     claims_list = []
@@ -32,7 +36,10 @@ async def list_claims(db: AsyncSession = Depends(get_db)):
             "farm_id": str(c.farm_id) if c.farm_id else None,
             "status": c.status.value if c.status else "SUBMITTED",
             "incident_date": c.incident_date.isoformat() if c.incident_date else None,
-            "event_type": c.event_type
+            "event_type": c.event_type,
+            "damage_pct": c.damage_pct,
+            "ai_confidence": c.ai_confidence,
+            "description": c.description
         })
         
     return Envelope(
@@ -179,6 +186,52 @@ async def verify_claim(id: str, db: AsyncSession = Depends(get_db)):
             "canonical_hash": claim.canonical_hash,
             "tx_hash": claim.tx_hash,
             "status": "VERIFIED" if claim.tx_hash else "PENDING"
+        },
+        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+        error=None
+    )
+
+@router.post("/{id}/review", response_model=Envelope)
+async def review_claim(id: str, req: ReviewClaimRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        claim_uuid = uuid.UUID(id)
+    except ValueError:
+        return Envelope(
+            success=False, data=None, 
+            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+            error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid UUID")
+        )
+        
+    claim = await db.get(Claim, claim_uuid)
+    if not claim:
+        return Envelope(
+            success=False, data=None,
+            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+            error=EnvelopeError(code="NOT_FOUND", message="Claim not found")
+        )
+        
+    if req.action == "APPROVE":
+        claim.status = ClaimStatus.APPROVED
+    elif req.action == "REJECT":
+        claim.status = ClaimStatus.REJECTED
+    else:
+        return Envelope(
+            success=False, data=None,
+            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
+            error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid action")
+        )
+        
+    await db.commit()
+    await db.refresh(claim)
+    
+    return Envelope(
+        success=True,
+        data={
+            "id": str(claim.id), 
+            "status": claim.status.value,
+            "event_type": claim.event_type,
+            "damage_pct": claim.damage_pct,
+            "description": claim.description
         },
         meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
         error=None

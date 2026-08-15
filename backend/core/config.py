@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgrespassword@localhost:5432/agrishield_dev"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres.lkwhqaiqzdutsxgeggko:AgriShield%40svh1@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
     
     # JWT Auth
     SECRET_KEY: str = "supersecretkey" # In production, read from env
@@ -21,7 +21,6 @@ class Settings(BaseSettings):
     POLYGON_PRIVATE_KEY: str = "40b5ad267a0986e3336dd511e0feb85bd73acb2eab1163c93c25d840970629c4"
     SMART_CONTRACT_ADDRESS: str = "0x479c319C22928FF293713e70F24d399220d46876"
     
-    class Config:
-        env_file = ".env"
+    model_config = {"env_file": ".env"}
 
 settings = Settings()

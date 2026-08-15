@@ -13,6 +13,17 @@ export default function Claims() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleReview = async (id: string, action: 'APPROVE' | 'REJECT') => {
+    try {
+      await api.reviewClaim(id, action);
+      setClaims(prev => prev.map(c => c.id === id ? { ...c, status: action } : c));
+      api._cache.claims = null; // invalidate cache
+      alert(`Claim ${action.toLowerCase()}d successfully.`);
+    } catch (e) {
+      alert(`Failed to ${action.toLowerCase()} claim.`);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col min-w-0">
             <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-6">
@@ -72,9 +83,18 @@ export default function Claims() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-primary hover:text-primary-container font-semibold transition-colors flex items-center justify-end gap-1 ml-auto">
-                          Review <FileSearch size={16} />
-                        </button>
+                        {claim.status === 'APPROVED' || claim.status === 'REJECTED' ? (
+                          <span className="text-on-surface-variant text-xs font-semibold">Reviewed</span>
+                        ) : (
+                          <div className="flex justify-end gap-3">
+                            <button onClick={() => handleReview(claim.id, 'APPROVE')} className="text-primary hover:text-primary-container font-bold transition-colors text-xs">
+                              Approve
+                            </button>
+                            <button onClick={() => handleReview(claim.id, 'REJECT')} className="text-error hover:text-error-container font-bold transition-colors text-xs">
+                              Reject
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))

@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Any, Dict
 from web3 import AsyncWeb3
-from web3.middleware import async_construct_sign_and_send_raw_middleware
+from web3.middleware import SignAndSendRawMiddlewareBuilder
 from eth_account import Account
 
 from core.config import settings
@@ -44,7 +44,7 @@ async def record_hash_on_chain(canonical_hash: str) -> str:
         account = Account.from_key(settings.POLYGON_PRIVATE_KEY)
         
         # Add signing middleware
-        w3.middleware_onion.add(async_construct_sign_and_send_raw_middleware(account))
+        w3.middleware_onion.inject(SignAndSendRawMiddlewareBuilder.build(account), layer=0)
         
         contract = w3.eth.contract(address=settings.SMART_CONTRACT_ADDRESS, abi=CONTRACT_ABI)
         

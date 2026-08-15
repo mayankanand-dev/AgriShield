@@ -51,7 +51,9 @@ async def list_policies(db: AsyncSession = Depends(get_db), current_user: User =
             "canonical_hash": p.canonical_hash,
             "tx_hash": p.tx_hash,
             "status": p.status.value if p.status else "ACTIVE",
-            "created_at": p.created_at.isoformat() if p.created_at else None
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "start_date": p.created_at.isoformat() if p.created_at else None,
+            "end_date": (p.created_at.replace(year=p.created_at.year + 1)).isoformat() if p.created_at else None
         })
         
     return Envelope(

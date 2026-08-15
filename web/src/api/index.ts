@@ -7,6 +7,14 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export type Envelope<T> = {
   success: boolean;
   data: T;
@@ -101,6 +109,11 @@ export type Notification = {
 };
 
 export const api = {
+  _cache: {
+    farms: null as Envelope<Farm[]> | null,
+    claims: null as Envelope<Claim[]> | null,
+    policies: null as Envelope<Policy[]> | null,
+  },
   login: async (credentials: any): Promise<Envelope<{ access_token: string; refresh_token: string }>> => {
     if (IS_DEMO) return createMockResponse({ access_token: 'mock-token', refresh_token: 'mock-refresh' });
     const res = await apiClient.post('/auth/login', credentials);
@@ -123,14 +136,18 @@ export const api = {
     const res = await apiClient.get('/notifications');
     return res.data;
   },
-  getFarms: async (): Promise<Envelope<Farm[]>> => {
+  getFarms: async (page: number = 1, page_size: number = 10000): Promise<Envelope<Farm[]>> => {
+    if (api._cache.farms) return api._cache.farms;
     if (IS_DEMO) return createMockResponse(MOCK_FARMS);
-    const res = await apiClient.get('/farms');
+    const res = await apiClient.get(`/farms?page=${page}&page_size=${page_size}`);
+    api._cache.farms = res.data;
     return res.data;
   },
-  getClaims: async (): Promise<Envelope<Claim[]>> => {
+  getClaims: async (page: number = 1, page_size: number = 10000): Promise<Envelope<Claim[]>> => {
+    if (api._cache.claims) return api._cache.claims;
     if (IS_DEMO) return createMockResponse(MOCK_CLAIMS);
-    const res = await apiClient.get('/claims');
+    const res = await apiClient.get(`/claims?page=${page}&page_size=${page_size}`);
+    api._cache.claims = res.data;
     return res.data;
   },
   reviewClaim: async (id: string, action: 'APPROVE' | 'REJECT'): Promise<Envelope<Claim>> => {
@@ -144,8 +161,10 @@ export const api = {
     return res.data;
   },
   getPolicies: async (): Promise<Envelope<Policy[]>> => {
+    if (api._cache.policies) return api._cache.policies;
     if (IS_DEMO) return createMockResponse(MOCK_POLICIES);
     const res = await apiClient.get('/insurance/policies');
+    api._cache.policies = res.data;
     return res.data;
   },
   verifyPolicy: async (id: string): Promise<Envelope<PolicyVerification>> => {

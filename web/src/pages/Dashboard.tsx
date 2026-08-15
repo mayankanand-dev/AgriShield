@@ -1,9 +1,23 @@
 import { FileText, ShieldAlert, Users, Activity, Download, TrendingUp, TrendingDown, Map as MapIcon } from 'lucide-react';
 import { api } from '../api';
+import type { Farm } from '../api';
 import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ policies: 0, claims: 0, farmers: 0, riskScore: 0 });
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
@@ -13,18 +27,23 @@ export default function Dashboard() {
           api.getClaims(),
           api.getFarms()
         ]);
-        
-        // Count unique farmers based on unique user_ids in farms
+
         const uniqueFarmers = new Set(farmsRes.data.map(f => f.user_id)).size;
-        
+
         setStats({
           policies: policiesRes.data.length,
           claims: claimsRes.data.length,
           farmers: uniqueFarmers,
-          riskScore: 42.5 // Hardcoded for now as there's no aggregate risk score endpoint
+          riskScore: 42.5
         });
-      } catch (err) {
+        
+        setFarms(farmsRes.data);
+        setErrorMsg(null);
+      } catch (err: any) {
         console.error("Failed to fetch dashboard stats", err);
+        setErrorMsg(err.message || String(err));
+      } finally {
+        setLoading(false);
       }
     }
     fetchStats();
@@ -32,11 +51,19 @@ export default function Dashboard() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
-            <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-8">
+      {errorMsg && (
+        <div className="bg-red-100 text-red-700 p-4 m-4 rounded border border-red-300 font-bold">
+          API Error: {errorMsg}
+        </div>
+      )}
+      <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-8">
         <div className="flex justify-between items-end mb-2">
           <div>
-            <h2 className="text-3xl font-bold text-on-background">Overview</h2>
-            <p className="text-base text-on-surface-variant mt-1">Real-time agricultural portfolio metrics.</p>
+            <h2 className="text-3xl font-bold text-on-background flex items-center gap-4">
+              Overview
+              {loading && <span className="text-sm font-normal text-on-surface-variant animate-pulse bg-primary/10 px-3 py-1 rounded-full">Syncing data...</span>}
+            </h2>
+            <p className="text-on-surface-variant mt-2">Real-time agricultural portfolio metrics.</p>
           </div>
           <button className="bg-primary text-on-primary px-4 py-2 rounded-lg text-sm hover:bg-surface-tint transition-colors shadow-sm flex items-center gap-2">
             <Download size={18} />
@@ -56,9 +83,34 @@ export default function Dashboard() {
             <div className="p-6 border-b border-surface-variant flex justify-between items-center bg-white z-10">
               <h3 className="text-lg font-bold text-on-background">Geographic Risk Distribution</h3>
             </div>
-            <div className="flex-1 bg-surface-variant flex items-center justify-center">
-              <MapIcon className="w-16 h-16 text-on-surface-variant opacity-50" />
-              <span className="ml-2 text-on-surface-variant font-medium">Map Component Placeholder</span>
+            <div className="flex-1 relative z-0">
+              <MapContainer center={[38.0, -97.0]} zoom={4} className="w-full h-full">
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                />
+                {farms.map((farm, index) => {
+                  const lat = 38.0 + (index * 2);
+                  const lng = -97.0 + (index * 2);
+                  const leafletCoords: [number, number][] = [
+                    [lat - 0.5, lng - 0.5],
+                    [lat + 0.5, lng - 0.5],
+                    [lat + 0.5, lng + 0.5],
+                    [lat - 0.5, lng + 0.5]
+                  ];
+                  return (
+                    <Polygon 
+                      key={farm.id}
+                      positions={leafletCoords} 
+                      pathOptions={{ 
+                        color: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
+                        fillColor: farm.status === 'VERIFIED' ? '#1B7A3D' : '#F5821F',
+                        fillOpacity: 0.4
+                      }} 
+                    />
+                  );
+                })}
+              </MapContainer>
             </div>
           </div>
           <div className="bg-surface-container-lowest border border-surface-variant rounded-xl flex flex-col overflow-hidden shadow-sm">

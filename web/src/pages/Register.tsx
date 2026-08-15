@@ -13,13 +13,18 @@ export default function Register() {
     setError('');
     
     try {
-      // In a real app, we'd grab form values. For now we pass a dummy object.
-      await api.register({ 
-        email: (e.target as any)[1].value, 
-        name: (e.target as any)[0].value, 
-        password: (e.target as any)[2].value 
-      });
-      navigate('/login');
+      const form = e.target as HTMLFormElement;
+      const name = (form.elements[0] as HTMLInputElement).value;
+      const email = (form.elements[1] as HTMLInputElement).value;
+      const password = (form.elements[2] as HTMLInputElement).value;
+      
+      const res = await api.register({ email, name, password });
+      
+      if (res && res.data && res.data.access_token) {
+        localStorage.setItem('access_token', res.data.access_token);
+      }
+      
+      navigate('/dashboard'); // or login, but it auto-logs in if it gives a token
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {

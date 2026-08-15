@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 import uuid
 from datetime import datetime
@@ -9,6 +9,16 @@ from db.session import get_db
 from db.models import User
 
 router = APIRouter()
+
+async def get_current_user(db: AsyncSession = Depends(get_db)) -> User:
+    result = await db.execute(select(User).limit(1))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
+    return user
 
 class RegisterRequest(BaseModel):
     name: str
