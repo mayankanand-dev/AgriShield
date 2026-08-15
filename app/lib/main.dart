@@ -4,6 +4,7 @@ import 'theme.dart';
 import 'ui/screens/onboarding_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     const ProviderScope(
       child: AgriShieldApp(),
