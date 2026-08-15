@@ -4,9 +4,10 @@ import '../models/envelope.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
+  // Using the local PC IP address so both Android Emulator and Physical devices can connect
   final String baseUrl;
 
-  ApiClient({this.baseUrl = "http://localhost:8000/api/v1"});
+  ApiClient({this.baseUrl = "http://172.25.232.27:8000/api/v1"});
 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
