@@ -55,7 +55,7 @@ def predict_yield(features: dict) -> dict:
     df = pd.DataFrame([row])
 
     t0 = time.time()
-    prediction = float(_pipeline.predict(df)[0])
+    prediction = float(_pipeline.predict(df)[0]) * 1000.0  # Convert tons/ha to kg/ha
     elapsed_ms = int((time.time() - t0) * 1000)
 
     # Confidence from inter-tree variance (lower CV = higher confidence)
