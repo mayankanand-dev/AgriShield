@@ -778,3 +778,43 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def process_geometry(points):
+    """
+    Process boundary coordinates and return geometry data dict.
+    Args:
+        points: list of [longitude, latitude] or [latitude, longitude]. 
+                Actually data_pipeline sends [[lon, lat], ...].
+    """
+    # Assuming input is [[lon, lat], ...] from data_pipeline
+    formatted_points = [(lat, lon) for lon, lat in points]
+    
+    polygon = create_polygon(formatted_points)
+    
+    if not polygon.is_valid:
+        polygon = polygon.buffer(0)
+    
+    area_m2, area_hectares, area_acres, perimeter_m = calculate_geodesic_metrics(formatted_points)
+    
+    centroid = polygon.centroid
+    
+    coords = [[lon, lat] for lon, lat in points]
+    if coords[0] != coords[-1]:
+        coords.append(coords[0])
+        
+    lons = [c[0] for c in coords]
+    lats = [c[1] for c in coords]
+    
+    return {
+        "geojson_polygon": {"type": "Polygon", "coordinates": [coords]},
+        "bbox": {
+            "min_lat": min(lats),
+            "max_lat": max(lats),
+            "min_lon": min(lons),
+            "max_lon": max(lons)
+        },
+        "centroid_lat": centroid.y,
+        "centroid_lon": centroid.x,
+        "area_hectares": area_hectares,
+        "area_m2": area_m2
+    }
