@@ -188,12 +188,28 @@ async def farm_yield_predict(farm_id: str, db: AsyncSession = Depends(get_db)):
     try:
         area_ha = (farm.area_m2 or 10000) / 10000.0
         crop = farm.crop or "wheat"
+        
+        boundary_coords = None
+        centroid_lat = None
+        centroid_lon = None
+        try:
+            if farm.boundary is not None:
+                shape = to_shape(farm.boundary)
+                centroid_lat = shape.centroid.y
+                centroid_lon = shape.centroid.x
+                boundary_coords = [[lon, lat] for lon, lat in shape.exterior.coords]
+        except Exception:
+            pass
+
         ai = get_ai_client()
         result = await ai.get_yield_prediction(
             crop=crop, area_ha=area_ha,
             weather={"rainfall": 80, "temp_mean": 27, "humidity": 65},
             soil={"pH": 6.5, "N": 50, "P": 25, "K": 200, "organic_carbon": 0.5},
             satellite={"ndvi_mean": 0.5, "ndwi_mean": 0.0, "ndmi_mean": 0.0},
+            boundary_coordinates=boundary_coords,
+            centroid_lat=centroid_lat,
+            centroid_lon=centroid_lon,
         )
         return Envelope(success=True, data=result,
             meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()), error=None)
@@ -211,6 +227,19 @@ async def farm_risk_score(farm_id: str, db: AsyncSession = Depends(get_db)):
     try:
         area_ha = (farm.area_m2 or 10000) / 10000.0
         crop = farm.crop or "wheat"
+
+        boundary_coords = None
+        centroid_lat = None
+        centroid_lon = None
+        try:
+            if farm.boundary is not None:
+                shape = to_shape(farm.boundary)
+                centroid_lat = shape.centroid.y
+                centroid_lon = shape.centroid.x
+                boundary_coords = [[lon, lat] for lon, lat in shape.exterior.coords]
+        except Exception:
+            pass
+
         ai = get_ai_client()
         result = await ai.get_risk_score(
             crop=crop, area_ha=area_ha,
@@ -218,6 +247,9 @@ async def farm_risk_score(farm_id: str, db: AsyncSession = Depends(get_db)):
             soil={"pH": 6.5, "N": 50, "P": 25, "K": 200},
             satellite={"ndvi_mean": 0.5, "ndwi_mean": 0.0, "ndmi_mean": 0.0},
             history={"yield_prediction": 3000, "disease_probability": 0.1, "historical_loss": 0.1},
+            boundary_coordinates=boundary_coords,
+            centroid_lat=centroid_lat,
+            centroid_lon=centroid_lon,
         )
         return Envelope(success=True, data=result,
             meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()), error=None)

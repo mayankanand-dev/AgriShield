@@ -12,10 +12,10 @@ class AIClient(ABC):
     async def get_damage_assessment(self, image_bytes: bytes, crop: str, event_type: str) -> Dict[str, Any]: pass
 
     @abstractmethod
-    async def get_yield_prediction(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict) -> Dict[str, Any]: pass
+    async def get_yield_prediction(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None) -> Dict[str, Any]: pass
 
     @abstractmethod
-    async def get_risk_score(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, history: dict) -> Dict[str, Any]: pass
+    async def get_risk_score(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, history: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None) -> Dict[str, Any]: pass
 
     @abstractmethod
     async def get_soil_ocr(self, file_bytes: bytes, filename: str) -> Dict[str, Any]: pass
@@ -40,14 +40,14 @@ class MockAIClient(AIClient):
             "low_confidence": False, "inference_ms": 12,
         }
 
-    async def get_yield_prediction(self, crop, area_ha, weather, soil, satellite):
+    async def get_yield_prediction(self, crop, area_ha, weather, soil, satellite, boundary_coordinates=None, centroid_lat=None, centroid_lon=None):
         return {
             "yield_value": 3200.0, "unit": "kg/ha",
             "model_version": "mock-v1", "confidence": 0.82,
             "low_confidence": False, "inference_ms": 5,
         }
 
-    async def get_risk_score(self, crop, area_ha, weather, soil, satellite, history):
+    async def get_risk_score(self, crop, area_ha, weather, soil, satellite, history, boundary_coordinates=None, centroid_lat=None, centroid_lon=None):
         return {
             "risk_score": 0.35, "risk_band": "medium", "factors": [],
             "model_version": "mock-v1", "confidence": 0.88,
@@ -94,7 +94,7 @@ class HttpAIClient(AIClient):
             r.raise_for_status()
             return r.json()
 
-    async def get_yield_prediction(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict):
+    async def get_yield_prediction(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None):
         payload = {
             "crop": crop,
             "area_ha": area_ha,
@@ -125,16 +125,19 @@ class HttpAIClient(AIClient):
             "ndmi_mean": satellite.get("ndmi_mean", 0.0),
             "ndmi_min": satellite.get("ndmi_min", -0.2),
             "ndmi_max": satellite.get("ndmi_max", 0.2),
+            "boundary_coordinates": boundary_coordinates,
+            "centroid_lat": centroid_lat,
+            "centroid_lon": centroid_lon,
         }
         async with httpx.AsyncClient(timeout=15.0) as client:
-            r = await client.post(f"{self.base_url}/v1/yield-prediction", json=payload)
+            r = await client.post(f"{self.base_url}/v1/yield-prediction/", json=payload)
             r.raise_for_status()
             return r.json()
 
-    async def get_risk_score(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, history: dict):
+    async def get_risk_score(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, history: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None):
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.post(
-                f"{self.base_url}/v1/risk-score",
+                f"{self.base_url}/v1/risk-score/",
                 json={
                     "crop": crop,
                     "area_ha": area_ha,
@@ -142,6 +145,9 @@ class HttpAIClient(AIClient):
                     "soil": soil,
                     "satellite": satellite,
                     "history": history,
+                    "boundary_coordinates": boundary_coordinates,
+                    "centroid_lat": centroid_lat,
+                    "centroid_lon": centroid_lon,
                 },
             )
             r.raise_for_status()
