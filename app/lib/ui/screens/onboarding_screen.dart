@@ -45,7 +45,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
             child: Container(
               width: 250,
               height: 250,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.primary.withOpacity(0.05)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.primary.withValues(alpha: 0.05)),
             ),
           ),
           Positioned(
@@ -54,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
             child: Container(
               width: 250,
               height: 250,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.secondary.withOpacity(0.05)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.secondary.withValues(alpha: 0.05)),
             ),
           ),
           
@@ -78,7 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                                   child: Container(
                                     width: 130,
                                     height: 130,
-                                    decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.primary.withOpacity(0.1)),
+                                    decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.primary.withValues(alpha: 0.1)),
                                   ),
                                 );
                               },
@@ -89,7 +89,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                               decoration: const BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.surfaceVariant),
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
-                                child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+                                child: Image.asset('assets/images/logo.webp', fit: BoxFit.contain),
                               ),
                             ),
                           ],
@@ -131,8 +131,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AgriShieldTheme.surface.withOpacity(0.9),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -4))],
+                color: AgriShieldTheme.surface.withValues(alpha: 0.9),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -4))],
               ),
               child: ElevatedButton(
                 onPressed: () {
@@ -176,10 +176,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         width: isFullWidth ? double.infinity : (MediaQuery.of(context).size.width - 48 - 16) / 2,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected ? AgriShieldTheme.primary.withOpacity(0.05) : AgriShieldTheme.surfaceContainerLowest,
+          color: isSelected ? AgriShieldTheme.primary.withValues(alpha: 0.05) : AgriShieldTheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: isSelected ? AgriShieldTheme.primary : Colors.transparent, width: 2),
-          boxShadow: isSelected ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+          boxShadow: isSelected ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
         ),
         child: Stack(
           children: [
@@ -189,7 +189,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                 Container(
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.surfaceVariant.withOpacity(0.5)),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.5)),
                   child: Icon(_getIconData(data['icon']!), color: AgriShieldTheme.primary),
                 ),
                 const SizedBox(height: 12),

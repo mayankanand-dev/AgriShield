@@ -31,14 +31,17 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
       context: context,
       barrierColor: Colors.white,
       transitionDuration: const Duration(milliseconds: 100),
-      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      pageBuilder: (context, animation, secondaryAnimation) => const SizedBox.shrink(),
     ).then((_) {
       setState(() {
         _showResults = true;
       });
       _showResultsBottomSheet();
     });
-    Future.delayed(const Duration(milliseconds: 100), () => Navigator.of(context).pop());
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    });
   }
 
   void _showResultsBottomSheet() {
@@ -122,7 +125,7 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), shape: BoxShape.circle),
                     child: const Icon(Icons.eco, color: AgriShieldTheme.onSecondaryContainer),
                   ),
                   const SizedBox(width: 16),
@@ -179,7 +182,7 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text('Farm Details', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
@@ -227,7 +230,7 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
                           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: const [
@@ -315,7 +318,7 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: Container(
           width: 48, height: 48,
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
           child: Icon(icon, color: Colors.white),
         ),
       ),

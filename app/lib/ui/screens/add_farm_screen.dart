@@ -24,7 +24,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text(
@@ -75,7 +75,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
                   polygons: <Polygon<Object>>[
                     Polygon<Object>(
                       points: _polygonPoints,
-                      color: AgriShieldTheme.primary.withOpacity(0.3),
+                      color: AgriShieldTheme.primary.withValues(alpha: 0.3),
                       borderColor: AgriShieldTheme.primary,
                       borderStrokeWidth: 3,
                     ),
@@ -112,10 +112,10 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       decoration: BoxDecoration(
-                        color: AgriShieldTheme.surface.withOpacity(0.95),
+                        color: AgriShieldTheme.surface.withValues(alpha: 0.95),
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Row(
@@ -147,7 +147,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
                 color: AgriShieldTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 4)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
@@ -194,7 +194,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: AgriShieldTheme.secondaryContainer.withOpacity(0.2),
+                            color: AgriShieldTheme.secondaryContainer.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.undo, color: AgriShieldTheme.secondaryContainer),

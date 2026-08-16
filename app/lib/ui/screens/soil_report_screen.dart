@@ -15,7 +15,7 @@ class SoilReportScreen extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text('Farm Details', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
@@ -33,7 +33,7 @@ class SoilReportScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AgriShieldTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
               ),
               child: Column(
                 children: [
@@ -122,7 +122,7 @@ class SoilReportScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AgriShieldTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: AgriShieldTheme.primaryContainer.withOpacity(0.1), blurRadius: 12)],
+                boxShadow: [BoxShadow(color: AgriShieldTheme.primaryContainer.withValues(alpha: 0.1), blurRadius: 12)],
               ),
               child: Column(
                 children: [
@@ -247,7 +247,7 @@ class SoilReportScreen extends StatelessWidget {
         const SizedBox(height: 4),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
           child: Text(status, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
         ),
       ],

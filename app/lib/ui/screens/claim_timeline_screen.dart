@@ -17,7 +17,7 @@ class ClaimTimelineScreen extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text('Insurance', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
@@ -37,7 +37,7 @@ class ClaimTimelineScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AgriShieldTheme.surfaceContainerLowest,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,7 +48,7 @@ class ClaimTimelineScreen extends StatelessWidget {
                     Text('Claim #$claimId', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(color: AgriShieldTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+                      decoration: BoxDecoration(color: AgriShieldTheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
                       child: Row(
                         children: const [
                           Icon(Icons.sync, size: 16, color: AgriShieldTheme.primary),
@@ -80,7 +80,7 @@ class ClaimTimelineScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AgriShieldTheme.surfaceContainerLowest,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +102,7 @@ class ClaimTimelineScreen extends StatelessWidget {
                   child: Container(
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withOpacity(0.5), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
@@ -122,7 +122,7 @@ class ClaimTimelineScreen extends StatelessWidget {
                   child: Container(
                     margin: const EdgeInsets.only(top: 12),
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withOpacity(0.3), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(12)),
                     child: Row(
                       children: [
                         Container(
@@ -181,7 +181,7 @@ class ClaimTimelineScreen extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: AgriShieldTheme.onTertiaryFixed.withOpacity(0.8), borderRadius: BorderRadius.circular(4)),
+                            decoration: BoxDecoration(color: AgriShieldTheme.onTertiaryFixed.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)),
                             child: const Text('0x4a2...7f9', style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: AgriShieldTheme.tertiaryFixed)),
                           ),
                           const SizedBox(width: 8),
@@ -246,10 +246,10 @@ class ClaimTimelineScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isActive ? AgriShieldTheme.primary : (isCompleted ? AgriShieldTheme.onSurface : AgriShieldTheme.onSurfaceVariant.withOpacity(0.7)))),
+                  Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isActive ? AgriShieldTheme.primary : (isCompleted ? AgriShieldTheme.onSurface : AgriShieldTheme.onSurfaceVariant.withValues(alpha: 0.7)))),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(fontSize: 14, color: isCompleted || isActive ? AgriShieldTheme.onSurfaceVariant : AgriShieldTheme.onSurfaceVariant.withOpacity(0.7))),
-                  if (child != null) child,
+                  Text(subtitle, style: TextStyle(fontSize: 14, color: isCompleted || isActive ? AgriShieldTheme.onSurfaceVariant : AgriShieldTheme.onSurfaceVariant.withValues(alpha: 0.7))),
+                  child ?? const SizedBox.shrink(),
                 ],
               ),
             ),

@@ -22,7 +22,7 @@ class InsuranceQuoteScreen extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text('Policy Enrollment', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
@@ -57,7 +57,7 @@ class InsuranceQuoteScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withOpacity(0.5), borderRadius: BorderRadius.circular(16)),
+                    decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(16)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: const [
@@ -77,7 +77,7 @@ class InsuranceQuoteScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AgriShieldTheme.surfaceContainerLowest,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
                 ),
                 child: Column(
                   children: [
@@ -180,7 +180,7 @@ class InsuranceQuoteScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: AgriShieldTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: AgriShieldTheme.primary.withOpacity(0.2))),
+                      decoration: BoxDecoration(color: AgriShieldTheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: AgriShieldTheme.primary.withValues(alpha: 0.2))),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
@@ -218,7 +218,7 @@ class InsuranceQuoteScreen extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                   decoration: BoxDecoration(
-                    color: AgriShieldTheme.surface.withOpacity(0.9),
+                    color: AgriShieldTheme.surface.withValues(alpha: 0.9),
                     border: const Border(top: BorderSide(color: AgriShieldTheme.surfaceVariant)),
                   ),
                   child: Column(

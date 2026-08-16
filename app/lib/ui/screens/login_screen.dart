@@ -1,6 +1,4 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'main_screen.dart';
 import '../../theme.dart';
@@ -22,8 +20,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _phoneController.dispose();
-    for (var c in _otpControllers) c.dispose();
-    for (var n in _otpFocusNodes) n.dispose();
+    for (var c in _otpControllers) { c.dispose(); }
+    for (var n in _otpFocusNodes) { n.dispose(); }
     super.dispose();
   }
 
@@ -66,7 +64,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Container(
               width: 250,
               height: 250,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.primary.withOpacity(0.05)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.primary.withValues(alpha: 0.05)),
             ),
           ),
           Positioned(
@@ -75,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Container(
               width: 250,
               height: 250,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.secondary.withOpacity(0.05)),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: AgriShieldTheme.secondary.withValues(alpha: 0.05)),
             ),
           ),
           
@@ -110,7 +108,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+              child: Image.asset('assets/images/logo.webp', fit: BoxFit.contain),
             ),
           ),
         ),
@@ -131,7 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               decoration: BoxDecoration(
                 color: AgriShieldTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
               ),
               child: Row(
                 children: [
@@ -139,7 +137,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     margin: const EdgeInsets.all(4),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
-                      color: AgriShieldTheme.surfaceVariant.withOpacity(0.5),
+                      color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(

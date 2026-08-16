@@ -21,11 +21,11 @@ class DashboardScreen extends ConsumerWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               title: Row(
                 children: [
-                  Image.asset('assets/images/logo.png', height: 24),
+                  Image.asset('assets/images/logo.webp', height: 24),
                   const SizedBox(width: 8),
                   Text(
                     'Home',
@@ -151,7 +151,7 @@ class DashboardScreen extends ConsumerWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.wb_sunny, color: AgriShieldTheme.onPrimaryContainer, size: 28),
@@ -174,7 +174,7 @@ class DashboardScreen extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: AgriShieldTheme.onPrimary.withOpacity(0.9),
+                    color: AgriShieldTheme.onPrimary.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -221,7 +221,7 @@ class DashboardScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 1),
             )
@@ -294,7 +294,7 @@ class DashboardScreen extends ConsumerWidget {
                                   color: riskDot,
                                   shape: BoxShape.circle,
                                   boxShadow: [
-                                    BoxShadow(color: riskDot.withOpacity(0.4), blurRadius: 4),
+                                    BoxShadow(color: riskDot.withValues(alpha: 0.4), blurRadius: 4),
                                   ]
                                 ),
                               ),
@@ -351,7 +351,7 @@ class DashboardScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AgriShieldTheme.primary.withOpacity(0.1),
+                              color: AgriShieldTheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text('Protect Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.primary)),

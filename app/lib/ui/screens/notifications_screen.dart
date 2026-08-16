@@ -15,7 +15,7 @@ class NotificationsScreen extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text('Alerts', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
@@ -51,7 +51,7 @@ class NotificationsScreen extends StatelessWidget {
             title: 'Heavy Rainfall Alert',
             titleColor: AgriShieldTheme.onErrorContainer,
             subtitle: 'Next 48 hrs. Expected 50-70mm rainfall. Secure harvested crops immediately.',
-            subtitleColor: AgriShieldTheme.onErrorContainer.withOpacity(0.8),
+            subtitleColor: AgriShieldTheme.onErrorContainer.withValues(alpha: 0.8),
             metadata: 'High Priority • Just now',
             metadataColor: AgriShieldTheme.error,
           ),
@@ -60,7 +60,7 @@ class NotificationsScreen extends StatelessWidget {
             icon: Icons.bug_report,
             iconBg: AgriShieldTheme.secondaryContainer,
             iconFg: AgriShieldTheme.onSecondaryContainer,
-            cardBg: AgriShieldTheme.secondaryContainer.withOpacity(0.2),
+            cardBg: AgriShieldTheme.secondaryContainer.withValues(alpha: 0.2),
             title: 'Pest Outbreak Alert',
             titleColor: AgriShieldTheme.onSurface,
             subtitle: 'Fall Armyworm detected in your area. Inspect maize crops within 3 days.',
@@ -73,7 +73,7 @@ class NotificationsScreen extends StatelessWidget {
             icon: Icons.water_drop,
             iconBg: AgriShieldTheme.primaryContainer,
             iconFg: AgriShieldTheme.onPrimaryContainer,
-            cardBg: AgriShieldTheme.surfaceVariant.withOpacity(0.3),
+            cardBg: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.3),
             title: 'Irrigation Reminder',
             titleColor: AgriShieldTheme.onSurface,
             subtitle: 'Farm A (Wheat) soil moisture is dropping. Plan irrigation for tomorrow morning.',
@@ -103,7 +103,7 @@ class NotificationsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4)],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

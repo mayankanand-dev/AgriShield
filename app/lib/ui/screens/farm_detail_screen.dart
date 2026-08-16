@@ -1,4 +1,4 @@
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import '../../theme.dart';
 import 'crop_photo_scan_screen.dart';
@@ -53,7 +53,7 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, AgriShieldTheme.surface.withOpacity(0.8)],
+                          colors: [Colors.transparent, AgriShieldTheme.surface.withValues(alpha: 0.8)],
                         ),
                       ),
                     ),
@@ -100,7 +100,7 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
             color: AgriShieldTheme.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AgriShieldTheme.surfaceVariant),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +188,7 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AgriShieldTheme.primary.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AgriShieldTheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(icon, color: AgriShieldTheme.primary),
             ),
             const SizedBox(width: 16),

@@ -33,7 +33,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withOpacity(0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text('Insurance', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
@@ -50,7 +50,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
           // Instruction
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AgriShieldTheme.primaryContainer.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: AgriShieldTheme.primaryContainer.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -87,17 +87,17 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isSelected ? AgriShieldTheme.primaryContainer.withOpacity(0.2) : AgriShieldTheme.surface,
+                    color: isSelected ? AgriShieldTheme.primaryContainer.withValues(alpha: 0.2) : AgriShieldTheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: isSelected ? AgriShieldTheme.primary : AgriShieldTheme.surfaceVariant, width: isSelected ? 2 : 1),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)],
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: isSelected ? AgriShieldTheme.primary.withOpacity(0.1) : AgriShieldTheme.surfaceVariant, shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: isSelected ? AgriShieldTheme.primary.withValues(alpha: 0.1) : AgriShieldTheme.surfaceVariant, shape: BoxShape.circle),
                         child: Icon(incident['icon'], color: isSelected ? AgriShieldTheme.primary : AgriShieldTheme.onSurfaceVariant, size: 28),
                       ),
                       const SizedBox(height: 8),
@@ -120,7 +120,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(color: AgriShieldTheme.surface, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)]),
+              decoration: BoxDecoration(color: AgriShieldTheme.surface, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)]),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -151,7 +151,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
                     children: [
                       Positioned(
                         top: 4, right: 4,
-                        child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white.withOpacity(0.8), shape: BoxShape.circle), child: const Icon(Icons.close, size: 16, color: AgriShieldTheme.error)),
+                        child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), shape: BoxShape.circle), child: const Icon(Icons.close, size: 16, color: AgriShieldTheme.error)),
                       )
                     ],
                   ),
@@ -179,6 +179,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
               });
               setState(() => _isSubmitting = false);
               
+              if (!context.mounted) return;
               if (res.success) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted successfully!')));
                 if (Navigator.canPop(context)) Navigator.pop(context);
@@ -206,7 +207,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
   Widget _buildAddPhotoBtn() {
     return Container(
       height: 100,
-      decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withOpacity(0.5), borderRadius: BorderRadius.circular(12), border: Border.all(color: AgriShieldTheme.surfaceVariant, style: BorderStyle.solid)),
+      decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(12), border: Border.all(color: AgriShieldTheme.surfaceVariant, style: BorderStyle.solid)),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: const [
