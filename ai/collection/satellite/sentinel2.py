@@ -3,7 +3,7 @@ import json
 import requests
 
 import rasterio
-
+from rasterio.io import MemoryFile
 from dotenv import load_dotenv
 
 
@@ -27,666 +27,186 @@ from dotenv import load_dotenv
 
 
 # ============================================================
-# 1. BASE DIRECTORY
+# IMPORTABLE API (used by data_pipeline — no disk writes)
 # ============================================================
 
-BASE_DIR = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        ".."
-    )
-)
-
-
-# ============================================================
-# 2. ENVIRONMENT
-# ============================================================
-
-ENV_FILE = os.path.join(
-    BASE_DIR,
-    ".env"
-)
-
-load_dotenv(
-    ENV_FILE
-)
-
-
-CLIENT_ID = os.getenv(
-    "COPERNICUS_CLIENT_ID"
-)
-
-CLIENT_SECRET = os.getenv(
-    "COPERNICUS_CLIENT_SECRET"
-)
-
-
-if not CLIENT_ID or not CLIENT_SECRET:
-
-    raise RuntimeError(
-        "COPERNICUS_CLIENT_ID or "
-        "COPERNICUS_CLIENT_SECRET "
-        "is missing from ai/.env"
-    )
-
-
-# ============================================================
-# 3. PATHS
-# ============================================================
-
-FARM_FILE = os.path.join(
-
-    BASE_DIR,
-    "data",
-    "processed",
-    "farm",
-    "farm.json"
-
-)
-
-
-OUTPUT_DIR = os.path.join(
-
-    BASE_DIR,
-    "data",
-    "processed",
-    "satellite",
-    "output"
-
-)
-
-
-os.makedirs(
-    OUTPUT_DIR,
-    exist_ok=True
-)
-
-
-if not os.path.exists(
-    FARM_FILE
-):
-
-    raise FileNotFoundError(
-        f"{FARM_FILE} not found.\n"
-        "Run farm_geometry.py first."
-    )
-
-
-# ============================================================
-# 4. LOAD FARM
-# ============================================================
-
-with open(
-    FARM_FILE,
-    "r",
-    encoding="utf-8"
-) as file:
-
-    farm = json.load(
-        file
-    )
-
-
-farm_id = farm[
-    "farm_id"
-]
-
-farm_geometry = farm[
-    "geometry"
-]
-
-
-# ============================================================
-# 5. ANALYSIS PERIOD
-# ============================================================
-#
-# Current testing period.
-#
-# Later this can be dynamically generated.
-# ============================================================
-
-ANALYSIS_FROM = (
-    "2026-07-01T00:00:00Z"
-)
-
-ANALYSIS_TO = (
-    "2026-08-15T23:59:59Z"
-)
-
-
-# ============================================================
-# 6. COPERNICUS ENDPOINTS
-# ============================================================
-
-TOKEN_URL = (
-
-    "https://identity.dataspace.copernicus.eu/"
-    "auth/realms/CDSE/protocol/openid-connect/token"
-
-)
-
-
-PROCESS_URL = (
-
-    "https://sh.dataspace.copernicus.eu/"
-    "process/v1"
-
-)
-
-
-# ============================================================
-# 7. HEADER
-# ============================================================
-
-print()
-print("=" * 70)
-print("            AGRISHIELD AI - SENTINEL-2")
-print("=" * 70)
-
-print()
-
-print(
-    "Farm ID:",
-    farm_id
-)
-
-print(
-    "Analysis period:",
-    f"{ANALYSIS_FROM} → {ANALYSIS_TO}"
-)
-
-
-# ============================================================
-# 8. AUTHENTICATION
-# ============================================================
-
-def get_access_token():
-
-    response = requests.post(
-
-        TOKEN_URL,
-
-        data={
-
-            "grant_type":
-            "client_credentials",
-
-            "client_id":
-            CLIENT_ID,
-
-            "client_secret":
-            CLIENT_SECRET
-
-        },
-
-        timeout=30
-
-    )
-
-
-    if response.status_code != 200:
-
-        print(
-            "\n❌ Copernicus authentication failed."
-        )
-
-        print(
-            response.text
-        )
-
-
-    response.raise_for_status()
-
-
-    return response.json()[
-        "access_token"
-    ]
-
-
-print()
-
-print(
-    "Authenticating with Copernicus..."
-)
-
-
-token = get_access_token()
-
-
-print(
-    "✓ Copernicus authentication successful"
-)
-
-
-# ============================================================
-# 9. EVALSCRIPT
-#
-# ONE SENTINEL-2 INPUT
-#
-# Everything requested as DN.
-#
-# B02 = Blue
-# B03 = Green
-# B04 = Red
-# B08 = NIR
-# B11 = SWIR
-# SCL = Scene Classification
-# ============================================================
-
-evalscript = """
-
+_EVALSCRIPT = """
 //VERSION=3
-
 function setup() {
-
     return {
-
-        input: [
-
-            {
-
-                bands: [
-
-                    "B02",
-                    "B03",
-                    "B04",
-                    "B08",
-                    "B11",
-                    "SCL"
-
-                ],
-
-                units: "DN"
-
-            }
-
-        ],
-
-
+        input: [{
+            bands: ["B02", "B03", "B04", "B08", "B11", "SCL"],
+            units: "DN"
+        }],
         output: {
-
             bands: 6,
-
-            sampleType:
-                SampleType.FLOAT32
-
+            sampleType: SampleType.FLOAT32
         }
-
     };
-
 }
 
-
 function evaluatePixel(sample) {
-
     return [
-
         sample.B02,
         sample.B03,
         sample.B04,
         sample.B08,
         sample.B11,
         sample.SCL
-
     ];
-
 }
-
 """
 
+_TOKEN_URL = (
+    "https://identity.dataspace.copernicus.eu/"
+    "auth/realms/CDSE/protocol/openid-connect/token"
+)
 
-# ============================================================
-# 10. REQUEST BODY
-# ============================================================
+_PROCESS_URL = "https://sh.dataspace.copernicus.eu/process/v1"
 
-request_body = {
 
-    "input": {
-
-        "bounds": {
-
-            "properties": {
-
-                "crs":
-                "http://www.opengis.net/def/"
-                "crs/OGC/1.3/CRS84"
-
-            },
-
-            "geometry":
-            farm_geometry
-
+def _get_copernicus_token(client_id: str, client_secret: str) -> str:
+    """Exchange client credentials for an access token."""
+    response = requests.post(
+        _TOKEN_URL,
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
         },
-
-
-        "data": [
-
-            {
-
-                "type":
-                "sentinel-2-l2a",
-
-
-                "dataFilter": {
-
-                    "timeRange": {
-
-                        "from":
-                        ANALYSIS_FROM,
-
-                        "to":
-                        ANALYSIS_TO
-
-                    },
-
-
-                    "maxCloudCoverage":
-                    80,
-
-
-                    "mosaickingOrder":
-                    "leastCC"
-
-                },
-
-
-                "processing": {
-
-                    "harmonizeValues":
-                    "true"
-
-                }
-
-            }
-
-        ]
-
-    },
-
-
-    "output": {
-
-        "width":
-        700,
-
-        "height":
-        700,
-
-
-        "responses": [
-
-            {
-
-                "identifier":
-                "default",
-
-
-                "format": {
-
-                    "type":
-                    "image/tiff"
-
-                }
-
-            }
-
-        ]
-
-    },
-
-
-    "evalscript":
-    evalscript
-
-}
-
-
-# ============================================================
-# 11. REQUEST DATA
-# ============================================================
-
-print()
-
-print(
-    "Requesting Sentinel-2 data..."
-)
-
-
-response = requests.post(
-
-    PROCESS_URL,
-
-    headers={
-
-        "Authorization":
-        f"Bearer {token}",
-
-        "Content-Type":
-        "application/json",
-
-        "Accept":
-        "image/tiff"
-
-    },
-
-    json=request_body,
-
-    timeout=180
-
-)
-
-
-# ============================================================
-# 12. HANDLE ERROR
-# ============================================================
-
-if response.status_code != 200:
-
-    print()
-
-    print(
-        "❌ Copernicus API request failed."
+        timeout=30,
     )
-
-    print(
-        "HTTP status:",
-        response.status_code
-    )
-
-
-    try:
-
-        print(
-            json.dumps(
-                response.json(),
-                indent=4
-            )
-        )
-
-    except Exception:
-
-        print(
-            response.text
-        )
-
 
     response.raise_for_status()
 
-
-print(
-    "✓ Sentinel-2 data received"
-)
-
-
-# ============================================================
-# 13. SAVE RAW TIFF
-# ============================================================
-
-raw_file = os.path.join(
-
-    OUTPUT_DIR,
-
-    "sentinel_raw.tif"
-
-)
+    try:
+        return response.json()["access_token"]
+    except (ValueError, KeyError) as exc:
+        raise RuntimeError(
+            "Copernicus authentication succeeded, but no access token "
+            "was returned."
+        ) from exc
 
 
-with open(
+def fetch_sentinel2(
+    geometry: dict,
+    from_date: str,
+    to_date: str,
+    width: int = 700,
+    height: int = 700,
+) -> bytes:
+    """
+    Fetch Sentinel-2 L2A imagery for a farm polygon in-memory.
 
-    raw_file,
+    Args:
+        geometry: GeoJSON Polygon dict
+            {"type": "Polygon", "coordinates": [...]}
+        from_date: ISO datetime string, e.g. "2026-07-01T00:00:00Z"
+        to_date: ISO datetime string, e.g. "2026-08-15T23:59:59Z"
+        width: Output raster width in pixels.
+        height: Output raster height in pixels.
 
-    "wb"
+    Returns:
+        Raw TIFF bytes (6 bands: B02, B03, B04, B08, B11, SCL).
 
-) as file:
+    Raises:
+        RuntimeError: If credentials are missing or the API call fails.
+    """
+    base_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..")
+    )
+    load_dotenv(os.path.join(base_dir, ".env"))
 
-    file.write(
-        response.content
+    client_id = os.getenv("COPERNICUS_CLIENT_ID")
+    client_secret = os.getenv("COPERNICUS_CLIENT_SECRET")
+
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "COPERNICUS_CLIENT_ID or COPERNICUS_CLIENT_SECRET "
+            "missing from ai/.env"
+        )
+
+    token = _get_copernicus_token(client_id, client_secret)
+
+    request_body = {
+        "input": {
+            "bounds": {
+                "properties": {
+                    "crs": "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
+                },
+                "geometry": geometry,
+            },
+            "data": [
+                {
+                    "type": "sentinel-2-l2a",
+                    "dataFilter": {
+                        "timeRange": {
+                            "from": from_date,
+                            "to": to_date,
+                        },
+                        "maxCloudCoverage": 80,
+                        "mosaickingOrder": "leastCC",
+                    },
+                    "processing": {
+                        "harmonizeValues": "true"
+                    },
+                }
+            ],
+        },
+        "output": {
+            "width": width,
+            "height": height,
+            "responses": [
+                {
+                    "identifier": "default",
+                    "format": {"type": "image/tiff"},
+                }
+            ],
+        },
+        "evalscript": _EVALSCRIPT,
+    }
+
+    response = requests.post(
+        _PROCESS_URL,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "image/tiff",
+        },
+        json=request_body,
+        timeout=180,
     )
 
+    if response.status_code != 200:
+        try:
+            detail = response.json()
+        except ValueError:
+            detail = response.text
 
-print(
-    "✓ Saved:",
-    raw_file
-)
+        raise RuntimeError(
+            f"Copernicus API error {response.status_code}: {detail}"
+        )
 
+    tif_bytes = response.content
 
-# ============================================================
-# 14. VALIDATE TIFF
-# ============================================================
+    try:
+        with MemoryFile(tif_bytes) as memfile:
+            with memfile.open() as src:
+                if src.count != 6:
+                    raise RuntimeError(
+                        f"Expected 6 bands from Copernicus, got {src.count}."
+                    )
+    except Exception as exc:
+        if isinstance(exc, RuntimeError):
+            raise
+        raise RuntimeError(
+            "Copernicus returned data, but it is not a valid TIFF."
+        ) from exc
 
-with rasterio.open(
-    raw_file
-) as src:
-
-    band_count = src.count
-
-    width = src.width
-
-    height = src.height
-
-    crs = src.crs
-
-
-print()
-
-print(
-    "========== RASTER =========="
-)
-
-print(
-    "Bands:",
-    band_count
-)
-
-print(
-    "Width:",
-    width
-)
-
-print(
-    "Height:",
-    height
-)
-
-print(
-    "CRS:",
-    crs
-)
-
-
-if band_count != 6:
-
-    raise RuntimeError(
-
-        f"Expected 6 bands, "
-        f"received {band_count}."
-
-    )
+    return tif_bytes
 
 
 # ============================================================
-# 15. SAVE METADATA
+# SCRIPT ENTRYPOINT
 # ============================================================
 
-metadata = {
-
-    "farm_id":
-    farm_id,
-
-    "analysis_period": {
-
-        "from":
-        ANALYSIS_FROM,
-
-        "to":
-        ANALYSIS_TO
-
-    },
-
-    "source":
-    "Copernicus Sentinel-2 L2A",
-
-    "bands": {
-
-        "1": "B02 - Blue",
-
-        "2": "B03 - Green",
-
-        "3": "B04 - Red",
-
-        "4": "B08 - NIR",
-
-        "5": "B11 - SWIR",
-
-        "6": "SCL - Scene Classification"
-
-    },
-
-    "output":
-    raw_file
-
-}
-
-
-metadata_file = os.path.join(
-
-    OUTPUT_DIR,
-
-    "satellite_metadata.json"
-
-)
-
-
-with open(
-
-    metadata_file,
-
-    "w",
-
-    encoding="utf-8"
-
-) as file:
-
-    json.dump(
-
-        metadata,
-
-        file,
-
-        indent=4
-
-    )
-
-
-print(
-    "✓ Metadata saved:",
-    metadata_file
-)
-
-
-print()
-
-print(
-    "✓ Sentinel-2 collection complete."
-)

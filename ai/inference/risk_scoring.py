@@ -9,13 +9,39 @@ _pipeline = None
 _metadata = None
 
 
+def _generate_fallback_metadata(model_path: str, pipeline) -> dict:
+    """Auto-generate metadata.json from the loaded pipeline if file is missing."""
+    meta = {
+        "model": "risk_score",
+        "version": "risk-v1.0.0",
+        "algorithm": "RandomForestRegressor",
+        "target": "risk_score",
+        "features": list(pipeline.feature_names_in_) if hasattr(pipeline, "feature_names_in_") else [
+            "crop", "area_ha", "rainfall", "temp_mean", "humidity",
+            "soil_ph", "nitrogen", "phosphorus", "potassium",
+            "ndvi_mean", "ndwi_mean", "ndmi_mean",
+            "yield_prediction", "disease_probability", "historical_loss",
+        ],
+    }
+    meta_path = os.path.join(os.path.dirname(model_path), "metadata.json")
+    try:
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=4)
+    except Exception:
+        pass
+    return meta
+
+
 def _load():
     global _pipeline, _metadata
     if _pipeline is None:
         _pipeline = joblib.load(config.RISK_MODEL)
         meta_path = os.path.join(os.path.dirname(config.RISK_MODEL), "metadata.json")
-        with open(meta_path, encoding="utf-8") as f:
-            _metadata = json.load(f)
+        if os.path.exists(meta_path):
+            with open(meta_path, encoding="utf-8") as f:
+                _metadata = json.load(f)
+        else:
+            _metadata = _generate_fallback_metadata(config.RISK_MODEL, _pipeline)
 
 
 def _risk_band(score: float) -> str:
