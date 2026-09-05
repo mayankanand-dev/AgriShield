@@ -181,18 +181,5 @@ with open(
     )
 
 
-print(
-    "✓ Yield model saved:"
-)
-
-print(
-    model_file
-)
-
-print(
-    "✓ Metadata saved:"
-)
-
-print(
-    metadata_file
-)
+print("[OK] Yield model saved:", model_file)
+print("[OK] Metadata saved:", metadata_file)

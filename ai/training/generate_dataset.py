@@ -111,12 +111,14 @@ CROPS = [
 
 
 CROP_BASE_YIELD = {
-    "soybean": 2.7,
-    "wheat": 3.6,
-    "rice": 4.1,
-    "maize": 4.4,
-    "cotton": 1.8,
-    "chickpea": 2.1
+    # India national average yields in tons/ha (PMFBY / ICAR 2023-24 estimates)
+    # inference.py multiplies by 1000 to get kg/ha — so these must stay in t/ha
+    "soybean":  1.10,   # India avg ~1,050–1,200 kg/ha; was incorrectly 2.7
+    "wheat":    3.30,   # India avg ~3,100–3,500 kg/ha; reasonable
+    "rice":     2.30,   # Paddy India avg ~2,100–2,400 kg/ha; was incorrectly 4.1
+    "maize":    3.00,   # India avg ~2,900–3,100 kg/ha; was incorrectly 4.4
+    "cotton":   0.55,   # Seed cotton lint-equivalent ~500–600 kg/ha
+    "chickpea": 1.00,   # India avg ~900–1,050 kg/ha; was incorrectly 2.1
 }
 
 
@@ -1019,8 +1021,8 @@ def generate_yield_target(
 
     return clip(
         yield_value,
-        0.2,
-        8.5
+        0.1,   # floor: 100 kg/ha (severe failure)
+        5.5,   # cap:   5,500 kg/ha — high-end achievable in India under irrigation
     )
 
 
