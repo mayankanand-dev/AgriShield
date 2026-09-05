@@ -1,7 +1,7 @@
 import { api } from '../api';
 import type { Policy } from '../api';
 import { useEffect, useState } from 'react';
-import { FileText, Plus, Shield } from 'lucide-react';
+import { FileText, Shield } from 'lucide-react';
 
 export default function Policies() {
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -27,16 +27,12 @@ export default function Policies() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
-            <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-6">
+      <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-6">
         <div className="flex justify-between items-end">
           <div>
             <h2 className="text-3xl font-bold text-on-background">Policy Management</h2>
-            <p className="text-base text-on-surface-variant mt-1">Review active PMFBY insurance policies and issue new quotes.</p>
+            <p className="text-base text-on-surface-variant mt-1">Review active PMFBY insurance policies and on-chain records.</p>
           </div>
-          <button className="bg-primary text-on-primary px-4 py-2 rounded-lg text-sm hover:bg-surface-tint transition-colors shadow-sm flex items-center gap-2">
-            <Plus size={18} />
-            Create Quote
-          </button>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

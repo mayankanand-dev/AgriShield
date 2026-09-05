@@ -6,6 +6,9 @@ import '../../theme.dart';
 import 'farm_detail_screen.dart';
 import 'add_farm_screen.dart';
 import 'insurance_quote_screen.dart';
+import 'crop_photo_scan_screen.dart';
+import 'soil_report_screen.dart';
+import 'file_claim_screen.dart';
 
 import 'dart:async';
 
@@ -121,6 +124,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _buildWelcomeHeader(ref.watch(userProvider)),
                 const SizedBox(height: 24),
                 _buildWeatherBanner(ref.watch(weatherProvider)),
+                const SizedBox(height: 20),
+                _buildQuickActionsRow(context),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -170,17 +175,97 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         loading: () => const Center(child: CircularProgressIndicator(color: AgriShieldTheme.primary)),
         error: (err, stack) => Center(child: Text('Error loading farms: $err')),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const AddFarmScreen()),
-          );
-        },
-        backgroundColor: AgriShieldTheme.primary,
-        foregroundColor: AgriShieldTheme.onPrimary,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Icon(Icons.add, size: 28),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 72.0),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const AddFarmScreen()),
+            );
+          },
+          backgroundColor: AgriShieldTheme.primary,
+          foregroundColor: AgriShieldTheme.onPrimary,
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: const Icon(Icons.add, size: 28),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildQuickActionItem(
+            icon: Icons.camera_alt,
+            label: 'Scan Crop',
+            color: AgriShieldTheme.primary,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CropPhotoScanScreen())),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildQuickActionItem(
+            icon: Icons.document_scanner,
+            label: 'Soil Card',
+            color: AgriShieldTheme.secondary,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SoilReportScreen())),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildQuickActionItem(
+            icon: Icons.shield,
+            label: 'Claim',
+            color: Colors.deepOrange,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FileClaimScreen())),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildQuickActionItem(
+            icon: Icons.add_location_alt,
+            label: 'Add Plot',
+            color: Colors.teal,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddFarmScreen())),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: AgriShieldTheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.8)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -354,28 +439,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                farm['crop'] ?? 'Unknown Crop',
-                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurface),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (farm['crop'] == null || farm['crop'].toString().trim().isEmpty || farm['crop'].toString().toLowerCase() == 'unsown' || farm['crop'].toString().toLowerCase() == 'fallow')
+                                  ? 'Fallow / Unsown'
+                                  : farm['crop'].toString(),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: (farm['crop'] == null || farm['crop'].toString().trim().isEmpty || farm['crop'].toString().toLowerCase() == 'unsown')
+                                    ? Colors.orange.shade800
+                                    : AgriShieldTheme.onSurface,
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_on, size: 16, color: AgriShieldTheme.onSurfaceVariant),
-                                  const SizedBox(width: 4),
-                                  Text(
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on, size: 16, color: AgriShieldTheme.onSurfaceVariant),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
                                     farm['name'] ?? 'Plot',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AgriShieldTheme.onSurfaceVariant),
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                      ),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
@@ -389,7 +486,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     // Status & Area Row
-                    Row(
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -398,6 +498,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
                                 width: 8,
@@ -418,8 +519,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 14),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.straighten, size: 16, color: AgriShieldTheme.onSurfaceVariant),
                             const SizedBox(width: 4),

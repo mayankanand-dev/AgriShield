@@ -74,7 +74,7 @@ def _get_copernicus_token(client_id: str, client_secret: str) -> str:
             "client_id": client_id,
             "client_secret": client_secret,
         },
-        timeout=30,
+        timeout=10,
     )
 
     response.raise_for_status()
@@ -174,7 +174,7 @@ def fetch_sentinel2(
             "Accept": "image/tiff",
         },
         json=request_body,
-        timeout=180,
+        timeout=18,
     )
 
     if response.status_code != 200:

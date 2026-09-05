@@ -151,6 +151,14 @@ async def predict_yield_endpoint(
 
     result = predict_yield(features)
 
+    # Compute total farm yield based on surveyed area
+    yield_val = float(result.get("yield_value", 0.0))
+    total_yield_kg = round(yield_val * area_ha, 2)
+    total_yield_quintals = round(total_yield_kg / 100.0, 2)
+    result["area_ha"] = round(area_ha, 2)
+    result["total_yield_kg"] = total_yield_kg
+    result["total_yield_quintals"] = total_yield_quintals
+
     # Enrich response with data source metadata
     result["data_sources"] = pipeline_result["data_sources"]
     result["centroid"] = {

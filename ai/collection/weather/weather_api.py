@@ -61,7 +61,7 @@ def fetch_weather(lat: float, lon: float) -> dict:
     params = {"lat": lat, "lon": lon, "appid": api_key, "units": "metric"}
 
     # --- Current weather ---
-    cur_resp = requests.get(_CURRENT_URL, params=params, timeout=60)
+    cur_resp = requests.get(_CURRENT_URL, params=params, timeout=8)
     cur_resp.raise_for_status()
     cur = cur_resp.json()
 
@@ -77,7 +77,7 @@ def fetch_weather(lat: float, lon: float) -> dict:
     rain_1h   = rain.get("1h", 0.0) or 0.0
 
     # --- Forecast (5 day / 3 hour) ---
-    fcast_resp = requests.get(_FORECAST_URL, params=params, timeout=60)
+    fcast_resp = requests.get(_FORECAST_URL, params=params, timeout=8)
     fcast_resp.raise_for_status()
     fcast = fcast_resp.json()
 

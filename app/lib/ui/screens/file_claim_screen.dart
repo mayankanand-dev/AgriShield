@@ -20,6 +20,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
   String _selectedIncident = 'Pest Attack';
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
+  String? _selectedFarmId;
   
   // Store picked files
   final List<File> _evidenceFiles = [];
@@ -31,6 +32,12 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
     {'name': 'Flood', 'icon': Icons.flood, 'code': 'flood'},
     {'name': 'Pest Attack', 'icon': Icons.bug_report, 'code': 'pest'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedFarmId = widget.farmId;
+  }
 
   Future<void> _pickImage() async {
     if (_evidenceFiles.length >= 3) {
@@ -61,10 +68,25 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
     );
 
     if (source != null) {
-      final XFile? image = await _picker.pickImage(source: source);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 82,
+      );
       if (image != null) {
+        final file = File(image.path);
+        final size = await file.length();
+        if (size > 10 * 1024 * 1024) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Photo too large (>10MB). Please select a smaller photo.')),
+            );
+          }
+          return;
+        }
         setState(() {
-          _evidenceFiles.add(File(image.path));
+          _evidenceFiles.add(file);
         });
       }
     }
@@ -78,6 +100,8 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final farmsAsync = ref.watch(farmsProvider);
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
@@ -89,7 +113,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
               backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
-              title: const Text('Insurance', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
+              title: const Text('File Claim', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
             ),
           ),
         ),
@@ -115,12 +139,93 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
                     children: const [
                       Text('File a Crop Damage Claim', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
                       SizedBox(height: 4),
-                      Text('Please select the incident type and upload at least 2 clear photos of the affected area.', style: TextStyle(fontSize: 14, color: AgriShieldTheme.onSurfaceVariant)),
+                      Text('Select the affected farm plot and incident type, then upload at least 2 clear damage photos.', style: TextStyle(fontSize: 14, color: AgriShieldTheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 24),
+
+          // Plot Selection
+          const Text('Select Affected Plot / Farm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
+          const SizedBox(height: 8),
+          farmsAsync.when(
+            loading: () => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AgriShieldTheme.surface, borderRadius: BorderRadius.circular(12)),
+              child: const Row(
+                children: [
+                  SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 12),
+                  Text('Loading registered plots...', style: TextStyle(fontSize: 14, color: AgriShieldTheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+            error: (err, stack) => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AgriShieldTheme.surface, borderRadius: BorderRadius.circular(12)),
+              child: const Text('Could not load plots. Tap retry.', style: TextStyle(color: AgriShieldTheme.error)),
+            ),
+            data: (farms) {
+              if (farms.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: AgriShieldTheme.surface, borderRadius: BorderRadius.circular(12)),
+                  child: const Text('No registered plots found. Please register a plot first.', style: TextStyle(color: AgriShieldTheme.onSurfaceVariant)),
+                );
+              }
+              // Set initial selected farm if not set
+              if (_selectedFarmId == null || !farms.any((f) => f['id']?.toString() == _selectedFarmId)) {
+                _selectedFarmId = farms.first['id']?.toString();
+              }
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AgriShieldTheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AgriShieldTheme.surfaceVariant),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)],
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedFarmId,
+                    isExpanded: true,
+                    icon: const Icon(Icons.arrow_drop_down, color: AgriShieldTheme.primary),
+                    items: farms.map((f) {
+                      final fId = f['id']?.toString() ?? '';
+                      final fName = f['name']?.toString() ?? 'Plot';
+                      final fCrop = f['crop']?.toString() ?? 'Fallow/Unsown';
+                      final areaM2 = (f['area_m2'] is num) ? (f['area_m2'] as num).toDouble() : 0.0;
+                      final areaHa = (areaM2 / 10000.0).toStringAsFixed(1);
+                      return DropdownMenuItem<String>(
+                        value: fId,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.landscape, size: 20, color: AgriShieldTheme.primary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '$fName • $fCrop ($areaHa ha)',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (newVal) {
+                      if (newVal != null) {
+                        setState(() => _selectedFarmId = newVal);
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           
@@ -280,7 +385,8 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
               final eventCode = selectedItem['code'] ?? 'pest';
 
               final res = await repo.createClaim({
-                "policy_id": policyId,
+                "policy_id": policyId.isNotEmpty ? policyId : null,
+                "farm_id": _selectedFarmId,
                 "incident_date": _selectedDate.toIso8601String().split('T')[0],
                 "event_type": eventCode,
                 "description": "Crop damage claim filed via farmer mobile app",

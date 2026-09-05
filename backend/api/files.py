@@ -33,7 +33,7 @@ async def upload_file(
             "mime_type": file_record.mime_type
         })
     except Exception as e:
-        _error("UPLOAD_FAILED", str(e), 500)
+        return _error("UPLOAD_FAILED", str(e), 500)
 
 @router.get("/{id}")
 async def get_file(id: str, db: AsyncSession = Depends(get_db)):

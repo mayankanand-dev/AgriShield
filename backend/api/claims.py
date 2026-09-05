@@ -16,7 +16,8 @@ from api.auth import get_current_user, get_admin_user, _ok, _error
 router = APIRouter()
 
 class CreateClaimRequest(BaseModel):
-    policy_id: str
+    policy_id: Optional[str] = None
+    farm_id: Optional[str] = None
     incident_date: str
     event_type: str
     description: str
@@ -73,24 +74,46 @@ async def create_claim(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    farm = None
+    if req.farm_id:
+        try:
+            farm_uuid = uuid.UUID(req.farm_id)
+            farm = await db.get(Farm, farm_uuid)
+        except (ValueError, TypeError):
+            farm = None
+
     policy = None
-    try:
-        policy_uuid = uuid.UUID(req.policy_id)
-        policy = await db.get(InsurancePolicy, policy_uuid)
-    except (ValueError, TypeError, AttributeError):
-        policy = None
+    if req.policy_id:
+        try:
+            policy_uuid = uuid.UUID(req.policy_id)
+            policy = await db.get(InsurancePolicy, policy_uuid)
+        except (ValueError, TypeError, AttributeError):
+            policy = None
         
-    # If policy not found or not owned by current_user, find user's active policy
-    if not policy or (current_user.role != UserRole.ADMIN and policy.user_id != current_user.id):
+    # If policy not specified or not owned, try finding one for this farm
+    if not policy and farm:
+        stmt = select(InsurancePolicy).where(
+            InsurancePolicy.farm_id == farm.id,
+            InsurancePolicy.user_id == current_user.id
+        ).order_by(InsurancePolicy.created_at.desc())
+        res = await db.execute(stmt)
+        policy = res.scalars().first()
+
+    # If still no policy, fallback to user's most recent policy
+    if not policy:
         stmt = select(InsurancePolicy).where(
             InsurancePolicy.user_id == current_user.id
         ).order_by(InsurancePolicy.created_at.desc())
         res = await db.execute(stmt)
         policy = res.scalars().first()
         
-    if not policy:
-        return _error("POLICY_NOT_FOUND", "No active insurance policy found to file claim against", 404)
+    target_farm_id = farm.id if farm else (policy.farm_id if policy else None)
+    if not target_farm_id and not policy:
+        return _error("FARM_OR_POLICY_REQUIRED", "Please select a valid registered farm or active insurance policy to file a claim.", 404)
         
+    if not farm and target_farm_id:
+        farm = await db.get(Farm, target_farm_id)
+
     evidence_uuids = []
     for eid in req.evidence_ids:
         try:
@@ -115,8 +138,8 @@ async def create_claim(
 
     new_claim = Claim(
         user_id=current_user.id,
-        farm_id=policy.farm_id,
-        policy_id=policy.id,
+        farm_id=target_farm_id,
+        policy_id=policy.id if policy else None,
         event_type=event_enum,
         description=req.description or "Claim filed via mobile app",
         evidence_ids=evidence_uuids,
@@ -139,9 +162,13 @@ async def create_claim(
         if not image_bytes:
             image_bytes = bytes([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10])
 
+        crop_for_assessment = "Wheat"
+        if farm and farm.crop and farm.crop.strip().lower() not in ("unsown", "fallow", "none", ""):
+            crop_for_assessment = farm.crop
+
         ai_res = await ai_client.get_damage_assessment(
             image_bytes=image_bytes,
-            crop="Wheat",
+            crop=crop_for_assessment,
             event_type=event_enum.value,
         )
         new_claim.status = ClaimStatus.AI_ASSESSED

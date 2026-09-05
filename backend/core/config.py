@@ -22,6 +22,6 @@ class Settings(BaseSettings):
     POLYGON_PRIVATE_KEY: str = ""
     SMART_CONTRACT_ADDRESS: str = ""
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 settings = Settings()

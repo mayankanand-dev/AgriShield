@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../theme.dart';
 import 'farm_details_form_screen.dart';
 
@@ -18,6 +19,75 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
   final List<LatLng> _polygonPoints = [];
   final MapController _mapController = MapController();
   bool _isSatellite = false;
+  bool _isLocating = false;
+
+  Future<void> _locateCurrentPosition() async {
+    setState(() => _isLocating = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enable GPS / Location service on your device')),
+          );
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Location permission denied')),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permissions are permanently denied, please enable in App Settings')),
+          );
+        }
+        return;
+      }
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 10)),
+      );
+
+      final userLatLng = LatLng(position.latitude, position.longitude);
+      _mapController.move(userLatLng, 17.0);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.my_location, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text('GPS: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}'),
+              ],
+            ),
+            backgroundColor: AgriShieldTheme.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('GPS fix error: $e. Centered on MP.'), backgroundColor: AgriShieldTheme.error),
+        );
+        _mapController.move(_mpCenter, 12.0);
+      }
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
 
   // Madhya Pradesh coordinates (Central MP / Bhopal & Sehore belt)
   static const LatLng _mpCenter = LatLng(23.2599, 77.4126);
@@ -321,11 +391,10 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                 ),
                 const SizedBox(height: 8),
                 _buildMapFloatingBtn(
-                  icon: Icons.my_location,
-                  tooltip: 'Center Madhya Pradesh',
-                  onTap: () {
-                    _mapController.move(_mpCenter, 12.0);
-                  },
+                  icon: _isLocating ? Icons.hourglass_top : Icons.my_location,
+                  tooltip: 'Locate My Farm (GPS)',
+                  isActive: _isLocating,
+                  onTap: _isLocating ? null : () => _locateCurrentPosition(),
                 ),
               ],
             ),
@@ -482,7 +551,7 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
   Widget _buildMapFloatingBtn({
     required IconData icon,
     required String tooltip,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
     bool isActive = false,
   }) {
     return Container(

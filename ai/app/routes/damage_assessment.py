@@ -52,7 +52,10 @@ async def assess_damage(
     if not image_bytes_list:
         raise HTTPException(status_code=422, detail="All uploaded image files are empty.")
 
-    result = predict_damage(image_bytes_list, event_type=event_type)
+    try:
+        result = predict_damage(image_bytes_list, event_type=event_type)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid or corrupted image format: {exc}")
     result["crop"]       = crop
     result["event_type"] = event_type
     return result

@@ -43,7 +43,10 @@ async def detect_crop_health(
     if not image_bytes:
         raise HTTPException(status_code=422, detail="Uploaded image file is empty.")
 
-    result = predict_crop_health(image_bytes)
+    try:
+        result = predict_crop_health(image_bytes)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid or corrupted image format: {exc}")
     # Attach request context for traceability
     result["crop"]         = crop
     result["growth_stage"] = growth_stage

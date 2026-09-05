@@ -68,55 +68,39 @@ def fetch_soil(lat: float, lon: float, bbox: dict) -> dict:
     if not token:
         raise RuntimeError("SOILHIVE_API_TOKEN missing from ai/.env")
 
-    try:
-        from openepi_client import GeoLocation, BoundingBox
-        from openepi_client.soil import SoilClient
-    except ImportError as e:
-        raise RuntimeError("openepi-client not installed. Run: pip install openepi-client") from e
+    import requests
+    url = "https://api.soilhive.ag/v1/soil-data-by-geometry"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    wkt_geom = f"POINT({float(lon)} {float(lat)})"
+    body = {
+        "geometry": wkt_geom,
+        "datasets": [19],
+    }
 
-    location = GeoLocation(lat=float(lat), lon=float(lon))
-    bb = BoundingBox(
-        min_lat=float(bbox["min_lat"]),
-        max_lat=float(bbox["max_lat"]),
-        min_lon=float(bbox["min_lon"]),
-        max_lon=float(bbox["max_lon"]),
-    )
-
-    # Query soil properties
-    soil_resp = SoilClient.get_soil_property(
-        geolocation=location,
-        depths=["0-5cm", "5-15cm"],
-        properties=["clay", "silt", "sand"],
-        values=["mean"],
-    )
-
-    # Serialize response
-    def _ser(v):
-        if hasattr(v, "model_dump"):
-            return v.model_dump()
-        if hasattr(v, "dict"):
-            return v.dict()
-        return v
-
-    raw = _ser(soil_resp)
-
-    # Extract clay/silt/sand mean at 0-5cm
     clay = sand = silt = None
     try:
-        props = raw.get("properties", {}).get("layers", [])
-        for layer in props:
-            name = layer.get("name", "")
-            depths = layer.get("depths", [])
-            for d in depths:
-                if d.get("label") == "0-5cm":
-                    val = d.get("values", {}).get("mean")
-                    if val is not None:
-                        val = float(val) / 10.0  # SoilHive returns g/kg → %
-                        if name == "clay": clay = val
-                        if name == "sand": sand = val
-                        if name == "silt": silt = val
-    except Exception:
-        pass  # use defaults below
+        resp = requests.post(url, headers=headers, json=body, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            elements = data.get("dataFeedElement", [])
+            for el in elements:
+                prop_name = str(el.get("property", "")).lower()
+                val = el.get("value")
+                if val is not None:
+                    try:
+                        val = float(val)
+                        if "clay" in prop_name: clay = val
+                        elif "sand" in prop_name: sand = val
+                        elif "silt" in prop_name: silt = val
+                    except (ValueError, TypeError):
+                        pass
+        elif resp.status_code == 401 or resp.status_code == 403:
+            raise RuntimeError(f"SoilHive authentication failed: HTTP {resp.status_code}")
+    except requests.RequestException as e:
+        raise RuntimeError(f"SoilHive connection error: {e}") from e
 
     # Derive approximate NPK/pH from texture
     # These are coarse estimates — real values need lab testing or ISRIC data

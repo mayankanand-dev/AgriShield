@@ -22,7 +22,14 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
 
   late Map<String, dynamic> _farmData;
   Map<String, dynamic>? _weatherData;
+  Map<String, dynamic>? _yieldData;
+  Map<String, dynamic>? _advisoryData;
+  Map<String, dynamic>? _riskData;
+  Map<String, dynamic>? _revenueData;
   bool _isLoadingWeather = true;
+  bool _isLoadingAi = false;
+  bool _isLoadingRevenue = false;
+  bool _isUpdatingCrop = false;
 
   @override
   void initState() {
@@ -31,6 +38,139 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
     _tabController = TabController(length: 4, vsync: this);
     _fetchWeather();
     _fetchFarmDetails();
+    _fetchAiInsights();
+    _fetchRevenue();
+  }
+
+  Future<void> _fetchRevenue() async {
+    final farmId = widget.farm['id'];
+    if (farmId == null) return;
+    setState(() => _isLoadingRevenue = true);
+    try {
+      final res = await _apiClient.get<Map<String, dynamic>>(
+        '/farms/$farmId/revenue',
+        (json) => json as Map<String, dynamic>,
+      );
+      if (res.success && res.data != null && mounted) {
+        setState(() {
+          _revenueData = res.data;
+          _isLoadingRevenue = false;
+        });
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isLoadingRevenue = false);
+  }
+
+  Future<void> _selectAdvisedCrop(String cropName) async {
+    final farmId = widget.farm['id'];
+    if (farmId == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Sow $cropName?'),
+        content: Text('Set $cropName as the active crop for this plot? This will update your crop advisories, yield predictions, and insurance quotes.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AgriShieldTheme.primary),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirm Sowing'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isUpdatingCrop = true);
+    try {
+      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+      final res = await _apiClient.patch<Map<String, dynamic>>(
+        '/farms/$farmId',
+        {
+          'crop': cropName,
+          'sowing_date': todayStr,
+        },
+        (json) => json as Map<String, dynamic>,
+      );
+
+      if (res.success && res.data != null && mounted) {
+        setState(() {
+          _farmData = res.data!;
+          widget.farm['crop'] = cropName;
+          widget.farm['sowing_date'] = todayStr;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully updated crop to $cropName!'),
+            backgroundColor: AgriShieldTheme.primary,
+          ),
+        );
+        // Refresh AI insights and revenue
+        _fetchAiInsights();
+        _fetchRevenue();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res.error?.message ?? 'Failed to update crop')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating crop: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingCrop = false);
+    }
+  }
+
+  Future<void> _fetchAiInsights() async {
+    final farmId = widget.farm['id'];
+    if (farmId == null) return;
+    setState(() => _isLoadingAi = true);
+
+    try {
+      final yieldRes = await _apiClient.post<Map<String, dynamic>>(
+        '/farms/$farmId/yield-predict',
+        {},
+        (json) => json as Map<String, dynamic>,
+      );
+      if (yieldRes.success && yieldRes.data != null && mounted) {
+        setState(() => _yieldData = yieldRes.data);
+      }
+    } catch (_) {}
+
+    try {
+      final advisoryRes = await _apiClient.post<Map<String, dynamic>>(
+        '/farms/$farmId/advisory',
+        {},
+        (json) => json as Map<String, dynamic>,
+      );
+      if (advisoryRes.success && advisoryRes.data != null && mounted) {
+        setState(() => _advisoryData = advisoryRes.data);
+      }
+    } catch (_) {}
+
+    try {
+      final riskRes = await _apiClient.post<Map<String, dynamic>>(
+        '/farms/$farmId/risk-score',
+        {},
+        (json) => json as Map<String, dynamic>,
+      );
+      if (riskRes.success && riskRes.data != null && mounted) {
+        setState(() => _riskData = riskRes.data);
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isLoadingAi = false);
+    }
+    // Also refresh revenue calculation with newest yield/crop
+    _fetchRevenue();
   }
 
   Future<void> _fetchFarmDetails() async {
@@ -99,7 +239,9 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final farmName = widget.farm['name'] ?? 'Farm Details';
-    final crop = widget.farm['crop'] ?? 'Cultivated Crop';
+    final rawCrop = (widget.farm['crop'] ?? _farmData['crop'])?.toString().trim();
+    final isUnsown = rawCrop == null || rawCrop.isEmpty || rawCrop.toLowerCase() == 'unsown' || rawCrop.toLowerCase() == 'fallow';
+    final cropDisplayName = isUnsown ? 'Fallow / Unsown' : rawCrop;
 
     return Scaffold(
       body: NestedScrollView(
@@ -113,7 +255,7 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.only(left: 16, bottom: 58, right: 16),
                 title: Text(
-                  '$farmName • $crop',
+                  '$farmName • $cropDisplayName',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
@@ -169,6 +311,9 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
     final areaM2 = (widget.farm['area_m2'] is num) ? (widget.farm['area_m2'] as num).toDouble() : 0.0;
     final areaHa = areaM2 / 10000.0;
     final areaAcres = areaHa * 2.47105;
+    final rawCrop = (widget.farm['crop'] ?? _farmData['crop'])?.toString().trim();
+    final isUnsown = rawCrop == null || rawCrop.isEmpty || rawCrop.toLowerCase() == 'unsown' || rawCrop.toLowerCase() == 'fallow';
+    final cropDisplayName = isUnsown ? 'Fallow / Unsown' : rawCrop;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -191,8 +336,18 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
                   const Text('Field & Crop Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: AgriShieldTheme.tertiaryFixed, borderRadius: BorderRadius.circular(12)),
-                    child: const Text('Registered', style: TextStyle(fontSize: 12, color: AgriShieldTheme.onTertiaryFixed, fontWeight: FontWeight.bold)),
+                    decoration: BoxDecoration(
+                      color: isUnsown ? Colors.orange.shade100 : AgriShieldTheme.tertiaryFixed,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isUnsown ? 'Needs Sowing' : 'Registered',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isUnsown ? Colors.orange.shade900 : AgriShieldTheme.onTertiaryFixed,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -205,7 +360,14 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
                       children: [
                         const Text('Sown Crop', style: TextStyle(fontSize: 12, color: AgriShieldTheme.onSurfaceVariant)),
                         const SizedBox(height: 2),
-                        Text(widget.farm['crop'] ?? 'Wheat', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        Text(
+                          cropDisplayName,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isUnsown ? Colors.orange.shade800 : AgriShieldTheme.onSurface,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -224,35 +386,522 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+
+        // Unsown Crop Suggestions Card
+        if (isUnsown && _advisoryData != null && _advisoryData!['recommended_crops'] != null && (_advisoryData!['recommended_crops'] as List).isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.eco, size: 20, color: Colors.green.shade700),
+                    const SizedBox(width: 8),
+                    Text('AI Sowing Recommendations', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green.shade900)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('Land is currently unsown. Based on soil pH, rainfall, and season, these crops are best suited:',
+                    style: TextStyle(fontSize: 12, color: Colors.green.shade800)),
+                const SizedBox(height: 10),
+                ...((_advisoryData!['recommended_crops'] as List).map((rc) {
+                  final recCropName = rc['crop']?.toString() ?? 'Crop';
+                  final suitability = rc['suitability']?.toString() ?? 'Good';
+                  final isHigh = suitability.toLowerCase() == 'high';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.shade200),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isHigh ? Colors.green.shade100 : Colors.amber.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '$recCropName • $suitability',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isHigh ? Colors.green.shade900 : Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AgriShieldTheme.primary,
+                                side: const BorderSide(color: AgriShieldTheme.primary, width: 1.2),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                visualDensity: VisualDensity.compact,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: _isUpdatingCrop ? null : () => _selectAdvisedCrop(recCropName),
+                              icon: const Icon(Icons.grass, size: 14),
+                              label: const Text('Sow This Crop', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          rc['reason']?.toString() ?? '',
+                          style: const TextStyle(fontSize: 12, color: AgriShieldTheme.onSurface),
+                        ),
+                      ],
+                    ),
+                  );
+                })),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        const SizedBox(height: 8),
         const Text('Agronomic Tools', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         _buildActionCard(
           icon: Icons.camera_alt,
           title: 'Scan Crop Photo',
           subtitle: 'Instant AI pest & disease detection',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CropPhotoScanScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CropPhotoScanScreen(
+                farmId: _farmData['id']?.toString() ?? widget.farm['id']?.toString(),
+                crop: isUnsown ? 'General' : (_farmData['crop']?.toString() ?? widget.farm['crop']?.toString()),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 12),
         _buildActionCard(
           icon: Icons.upload_file,
           title: 'Upload Soil Health Card',
           subtitle: 'OCR nutrient extraction (N, P, K, pH)',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SoilReportScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SoilReportScreen(
+                farmId: _farmData['id']?.toString() ?? widget.farm['id']?.toString(),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 12),
         _buildActionCard(
           icon: Icons.shield,
           title: 'PMFBY Insurance Quote',
           subtitle: 'Subsidized crop protection with blockchain audit',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => InsuranceQuoteScreen(
-            farm: widget.farm,
-            farmId: widget.farm['id']?.toString() ?? '',
-            crop: widget.farm['crop'] ?? 'Wheat',
-            areaM2: areaM2 > 0 ? areaM2 : 10000.0,
-            farmName: widget.farm['name'],
-          ))),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => InsuranceQuoteScreen(
+                farm: widget.farm,
+                farmId: widget.farm['id']?.toString() ?? '',
+                crop: isUnsown ? (_advisoryData?['suggested_crop'] ?? 'Soybean') : (widget.farm['crop'] ?? 'Wheat'),
+                areaM2: areaM2 > 0 ? areaM2 : 10000.0,
+                farmName: widget.farm['name'],
+              ),
+            ),
+          ),
         ),
+
+        // Live AI Insights Section
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('AI Yield & Agronomic Insights', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            if (_isLoadingAi)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AgriShieldTheme.primary),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: AgriShieldTheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
+                child: const Text('LIVE AI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AgriShieldTheme.onPrimaryContainer)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Yield Prediction Card
+        if (_yieldData != null) ...[
+          Builder(builder: (context) {
+            final rawYieldVal = _yieldData!['yield_value'] is num ? (_yieldData!['yield_value'] as num).toDouble() : 3200.0;
+            final farmAreaHa = areaHa > 0 ? areaHa : 1.0;
+            final totalYieldKg = _yieldData!['total_yield_kg'] is num
+                ? (_yieldData!['total_yield_kg'] as num).toDouble()
+                : (rawYieldVal * farmAreaHa);
+            final totalYieldQuintals = _yieldData!['total_yield_quintals'] is num
+                ? (_yieldData!['total_yield_quintals'] as num).toDouble()
+                : (totalYieldKg / 100.0);
+            final yieldIsUnsown = _yieldData!['is_unsown'] == true || isUnsown;
+            final suggestedCropName = _yieldData!['suggested_crop']?.toString() ?? _advisoryData?['suggested_crop']?.toString() ?? 'Soybean';
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AgriShieldTheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AgriShieldTheme.primary.withValues(alpha: 0.2)),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(color: AgriShieldTheme.primaryContainer, shape: BoxShape.circle),
+                            child: const Icon(Icons.analytics, color: AgriShieldTheme.onPrimaryContainer, size: 18),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            yieldIsUnsown ? 'Potential Yield ($suggestedCropName)' : 'Predicted Crop Yield',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '${((_yieldData!['confidence'] ?? 0.82) * 100).toInt()}% Conf.',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.primary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        rawYieldVal.toStringAsFixed(0),
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _yieldData!['unit']?.toString() ?? 'kg/ha',
+                        style: const TextStyle(fontSize: 14, color: AgriShieldTheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AgriShieldTheme.primaryContainer.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.scale, size: 16, color: AgriShieldTheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Total Farm Yield: ${totalYieldKg.toStringAsFixed(0)} kg (~${totalYieldQuintals.toStringAsFixed(1)} Q)',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (yieldIsUnsown) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '• Plot is unsown. Projected yield assuming sowing of recommended crop ($suggestedCropName).',
+                      style: TextStyle(fontSize: 11, color: Colors.orange.shade800, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  Text(
+                    'Model: ${_yieldData!['model_version'] ?? 'rf-yield-v1.0'} • Pipeline: Copernicus + SoilHive',
+                    style: const TextStyle(fontSize: 11, color: AgriShieldTheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+        ],
+
+        // Mandi Market & Estimated Revenue Card
+        if (_revenueData != null) ...[
+          Builder(builder: (context) {
+            final rev = _revenueData!;
+            final mandiPrice = (rev['mandi_price_per_quintal'] is num)
+                ? (rev['mandi_price_per_quintal'] as num).toDouble()
+                : 2425.0;
+            final cropTitle = rev['crop']?.toString() ?? 'Crop';
+            final market = rev['market']?.toString() ?? 'MP Mandi Benchmark';
+            final isUnsownRev = rev['is_unsown'] == true || isUnsown;
+            final source = rev['price_source']?.toString() ?? rev['source']?.toString() ?? 'Agmarknet';
+
+            // Yield in Quintals: check backend revenue response, then fallback to loaded AI yield data
+            double totalQ = (rev['total_yield_quintals'] is num)
+                ? (rev['total_yield_quintals'] as num).toDouble()
+                : (rev['yield_quintals'] is num)
+                    ? (rev['yield_quintals'] as num).toDouble()
+                    : 0.0;
+
+            if (totalQ <= 0 && _yieldData != null) {
+              final rawYieldKgHa = (_yieldData!['yield_value'] is num)
+                  ? (_yieldData!['yield_value'] as num).toDouble()
+                  : 3200.0;
+              final farmAreaHa = areaHa > 0 ? areaHa : 1.0;
+              final totalYieldKg = (_yieldData!['total_yield_kg'] is num)
+                  ? (_yieldData!['total_yield_kg'] as num).toDouble()
+                  : (rawYieldKgHa * farmAreaHa);
+              totalQ = totalYieldKg / 100.0;
+            } else if (totalQ <= 0) {
+              totalQ = (3200.0 * (areaHa > 0 ? areaHa : 1.0)) / 100.0;
+            }
+
+            // Total Revenue: check backend revenue response, then fallback to totalQ * mandiPrice
+            double totalRev = (rev['total_revenue'] is num)
+                ? (rev['total_revenue'] as num).toDouble()
+                : (rev['total_revenue_inr'] is num)
+                    ? (rev['total_revenue_inr'] as num).toDouble()
+                    : 0.0;
+
+            if (totalRev <= 0) {
+              totalRev = totalQ * mandiPrice;
+            }
+
+            // Format INR currency
+            String formattedRev;
+            if (totalRev >= 100000) {
+              formattedRev = '₹${(totalRev / 100000.0).toStringAsFixed(2)} Lakh';
+            } else {
+              formattedRev = '₹${totalRev.toStringAsFixed(0)}';
+            }
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.amber.shade50, Colors.orange.shade50.withValues(alpha: 0.6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.amber.shade300, width: 1.2),
+                boxShadow: [BoxShadow(color: Colors.orange.withValues(alpha: 0.06), blurRadius: 8)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(color: Colors.amber.shade200, shape: BoxShape.circle),
+                            child: Icon(Icons.currency_rupee, color: Colors.orange.shade900, size: 18),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isUnsownRev ? 'Potential Revenue ($cropTitle)' : 'Estimated Market Revenue',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.orange.shade900),
+                          ),
+                        ],
+                      ),
+                      if (_isLoadingRevenue)
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber.shade200),
+                          ),
+                          child: Text(
+                            source,
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        formattedRev,
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.orange.shade900),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'gross value',
+                        style: TextStyle(fontSize: 13, color: Colors.brown.shade600, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.amber.shade100),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Mandi Modal Price:', style: TextStyle(fontSize: 12, color: Colors.brown.shade700)),
+                            Text('₹${mandiPrice.toStringAsFixed(0)} / Quintal', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Estimated Yield:', style: TextStyle(fontSize: 12, color: Colors.brown.shade700)),
+                            Text('${totalQ.toStringAsFixed(1)} Quintals', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Market / Mandi:', style: TextStyle(fontSize: 12, color: Colors.brown.shade700)),
+                            Text(market, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.primary)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Calculated as (Total Yield in Quintals) × (Agmarknet Mandi Price). Actual returns depend on harvest quality and APMC grade.',
+                    style: TextStyle(fontSize: 10, color: Colors.brown.shade600, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+        ],
+
+        // Risk Assessment Card
+        if (_riskData != null) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AgriShieldTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AgriShieldTheme.surfaceVariant),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (_riskData!['risk_band']?.toString().toUpperCase() == 'LOW')
+                        ? Colors.green.shade50
+                        : Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.security,
+                    color: (_riskData!['risk_band']?.toString().toUpperCase() == 'LOW')
+                        ? Colors.green.shade700
+                        : Colors.orange.shade700,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Risk Band: ${_riskData!['risk_band']?.toString().toUpperCase() ?? 'MODERATE'}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Risk Score: ${((_riskData!['risk_score'] ?? 0.35) * 100).toInt()}% • Dynamic PMFBY benchmark',
+                        style: const TextStyle(fontSize: 12, color: AgriShieldTheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // Agronomic Advisory Card
+        if (_advisoryData != null && _advisoryData!['recommendations'] != null) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AgriShieldTheme.secondaryContainer.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, size: 18, color: AgriShieldTheme.secondary),
+                    SizedBox(width: 8),
+                    Text('AI Agronomic Advisory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AgriShieldTheme.onSecondaryContainer)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...((_advisoryData!['recommendations'] as List).take(3).map((rec) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Expanded(child: Text(rec.toString(), style: const TextStyle(fontSize: 12))),
+                    ],
+                  ),
+                ))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
       ],
     );
   }
@@ -465,7 +1114,14 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
           icon: Icons.document_scanner,
           title: 'Upload Official Soil Health Card',
           subtitle: 'Scan govt card to update OCR nutrient records',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SoilReportScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SoilReportScreen(
+                farmId: _farmData['id']?.toString() ?? widget.farm['id']?.toString(),
+              ),
+            ),
+          ),
         ),
       ],
     );
