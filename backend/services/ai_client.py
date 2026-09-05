@@ -73,100 +73,116 @@ class MockAIClient(AIClient):
 class HttpAIClient(AIClient):
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip("/")
+        self._fallback = MockAIClient()
 
     async def get_crop_health(self, image_bytes: bytes, crop: str, growth_stage: str):
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            r = await client.post(
-                f"{self.base_url}/v1/crop-health",
-                files={"image": ("image.jpg", image_bytes, "image/jpeg")},
-                data={"crop": crop, "growth_stage": growth_stage},
-            )
-            r.raise_for_status()
-            return r.json()
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.post(
+                    f"{self.base_url}/v1/crop-health",
+                    files={"image": ("image.jpg", image_bytes, "image/jpeg")},
+                    data={"crop": crop, "growth_stage": growth_stage},
+                )
+                r.raise_for_status()
+                return r.json()
+        except Exception:
+            return await self._fallback.get_crop_health(image_bytes, crop, growth_stage)
 
     async def get_damage_assessment(self, image_bytes: bytes, crop: str, event_type: str):
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(
-                f"{self.base_url}/v1/damage-assessment",
-                files={"images": ("image.jpg", image_bytes, "image/jpeg")},
-                data={"crop": crop, "event_type": event_type},
-            )
-            r.raise_for_status()
-            return r.json()
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.post(
+                    f"{self.base_url}/v1/damage-assessment",
+                    files={"images": ("image.jpg", image_bytes, "image/jpeg")},
+                    data={"crop": crop, "event_type": event_type},
+                )
+                r.raise_for_status()
+                return r.json()
+        except Exception:
+            return await self._fallback.get_damage_assessment(image_bytes, crop, event_type)
 
     async def get_yield_prediction(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None):
-        payload = {
-            "crop": crop,
-            "area_ha": area_ha,
-            "sowing_date": "2026-06-01",
-            # Flatten weather
-            "rainfall": weather.get("rainfall", 80),
-            "rainfall_7d": weather.get("rainfall_7d", 20),
-            "rainfall_30d": weather.get("rainfall_30d", 80),
-            "temp_mean": weather.get("temp_mean", 25),
-            "temp_max": weather.get("temp_max", 32),
-            "temp_min": weather.get("temp_min", 18),
-            "humidity": weather.get("humidity", 60),
-            "wind_speed": weather.get("wind_speed", 10),
-            # Flatten soil
-            "soil_ph": soil.get("pH", 6.5),
-            "nitrogen": soil.get("N", 50),
-            "phosphorus": soil.get("P", 25),
-            "potassium": soil.get("K", 200),
-            "organic_carbon": soil.get("organic_carbon", 0.5),
-            # Flatten satellite
-            "ndvi_mean": satellite.get("ndvi_mean", 0.5),
-            "ndvi_min": satellite.get("ndvi_min", 0.3),
-            "ndvi_max": satellite.get("ndvi_max", 0.7),
-            "ndvi_std": satellite.get("ndvi_std", 0.1),
-            "ndwi_mean": satellite.get("ndwi_mean", 0.0),
-            "ndwi_min": satellite.get("ndwi_min", -0.2),
-            "ndwi_max": satellite.get("ndwi_max", 0.2),
-            "ndmi_mean": satellite.get("ndmi_mean", 0.0),
-            "ndmi_min": satellite.get("ndmi_min", -0.2),
-            "ndmi_max": satellite.get("ndmi_max", 0.2),
-            "boundary_coordinates": boundary_coordinates,
-            "centroid_lat": centroid_lat,
-            "centroid_lon": centroid_lon,
-        }
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            r = await client.post(f"{self.base_url}/v1/yield-prediction/", json=payload)
-            r.raise_for_status()
-            return r.json()
+        try:
+            payload = {
+                "crop": crop,
+                "area_ha": area_ha,
+                "sowing_date": "2026-06-01",
+                "rainfall": weather.get("rainfall", 80),
+                "rainfall_7d": weather.get("rainfall_7d", 20),
+                "rainfall_30d": weather.get("rainfall_30d", 80),
+                "temp_mean": weather.get("temp_mean", 25),
+                "temp_max": weather.get("temp_max", 32),
+                "temp_min": weather.get("temp_min", 18),
+                "humidity": weather.get("humidity", 60),
+                "wind_speed": weather.get("wind_speed", 10),
+                "soil_ph": soil.get("pH", 6.5),
+                "nitrogen": soil.get("N", 50),
+                "phosphorus": soil.get("P", 25),
+                "potassium": soil.get("K", 200),
+                "organic_carbon": soil.get("organic_carbon", 0.5),
+                "ndvi_mean": satellite.get("ndvi_mean", 0.5),
+                "ndvi_min": satellite.get("ndvi_min", 0.3),
+                "ndvi_max": satellite.get("ndvi_max", 0.7),
+                "ndvi_std": satellite.get("ndvi_std", 0.1),
+                "ndwi_mean": satellite.get("ndwi_mean", 0.0),
+                "ndwi_min": satellite.get("ndwi_min", -0.2),
+                "ndwi_max": satellite.get("ndwi_max", 0.2),
+                "ndmi_mean": satellite.get("ndmi_mean", 0.0),
+                "ndmi_min": satellite.get("ndmi_min", -0.2),
+                "ndmi_max": satellite.get("ndmi_max", 0.2),
+                "boundary_coordinates": boundary_coordinates,
+                "centroid_lat": centroid_lat,
+                "centroid_lon": centroid_lon,
+            }
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.post(f"{self.base_url}/v1/yield-prediction/", json=payload)
+                r.raise_for_status()
+                return r.json()
+        except Exception:
+            return await self._fallback.get_yield_prediction(crop, area_ha, weather, soil, satellite, boundary_coordinates, centroid_lat, centroid_lon)
 
     async def get_risk_score(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, history: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None):
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            r = await client.post(
-                f"{self.base_url}/v1/risk-score/",
-                json={
-                    "crop": crop,
-                    "area_ha": area_ha,
-                    "weather": weather,
-                    "soil": soil,
-                    "satellite": satellite,
-                    "history": history,
-                    "boundary_coordinates": boundary_coordinates,
-                    "centroid_lat": centroid_lat,
-                    "centroid_lon": centroid_lon,
-                },
-            )
-            r.raise_for_status()
-            return r.json()
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.post(
+                    f"{self.base_url}/v1/risk-score/",
+                    json={
+                        "crop": crop,
+                        "area_ha": area_ha,
+                        "weather": weather,
+                        "soil": soil,
+                        "satellite": satellite,
+                        "history": history,
+                        "boundary_coordinates": boundary_coordinates,
+                        "centroid_lat": centroid_lat,
+                        "centroid_lon": centroid_lon,
+                    },
+                )
+                r.raise_for_status()
+                return r.json()
+        except Exception:
+            return await self._fallback.get_risk_score(crop, area_ha, weather, soil, satellite, history, boundary_coordinates, centroid_lat, centroid_lon)
 
     async def get_soil_ocr(self, file_bytes: bytes, filename: str):
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            r = await client.post(
-                f"{self.base_url}/v1/soil-ocr",
-                files={"file": (filename, file_bytes, "application/octet-stream")},
-            )
-            r.raise_for_status()
-            return r.json()
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.post(
+                    f"{self.base_url}/v1/soil-ocr",
+                    files={"file": (filename, file_bytes, "application/octet-stream")},
+                )
+                r.raise_for_status()
+                return r.json()
+        except Exception:
+            return await self._fallback.get_soil_ocr(file_bytes, filename)
 
     async def get_advisory(self, farm_context: dict):
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.post(f"{self.base_url}/v1/advisory", json=farm_context)
-            r.raise_for_status()
-            return r.json()
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.post(f"{self.base_url}/v1/advisory", json=farm_context)
+                r.raise_for_status()
+                return r.json()
+        except Exception:
+            return await self._fallback.get_advisory(farm_context)
 
 
 def get_ai_client() -> AIClient:
