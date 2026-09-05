@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 
 from db.session import get_db
 from db.models import User, UserRole
-from core.security import create_access_token, verify_password
+from core.security import create_access_token, verify_password, get_password_hash
 from core.config import settings
 
 router = APIRouter()
@@ -21,6 +21,11 @@ class RegisterOrLoginRequest(BaseModel):
 class AdminLoginRequest(BaseModel):
     email: str
     password: str
+
+class AdminRegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str = None
 
 class UpdateProfileRequest(BaseModel):
     name: str
@@ -142,6 +147,40 @@ async def admin_login(req: AdminLoginRequest, db: AsyncSession = Depends(get_db)
             "email": user.email,
             "name": user.name,
             "role": user.role.value
+        },
+        "access_token": access_token
+    })
+
+
+@router.post("/register")
+async def admin_register(req: AdminRegisterRequest, db: AsyncSession = Depends(get_db)):
+    if not req.email or not req.password:
+        _error("VALIDATION_ERROR", "Email and password are required")
+        
+    result = await db.execute(select(User).where(User.email == req.email))
+    existing = result.scalar_one_or_none()
+    if existing:
+        _error("USER_EXISTS", "A user with this email already exists", 400)
+        
+    hashed = get_password_hash(req.password)
+    user_name = req.name.strip() if req.name and req.name.strip() else req.email.split("@")[0]
+    new_admin = User(
+        email=req.email,
+        name=user_name,
+        hashed_password=hashed,
+        role=UserRole.ADMIN
+    )
+    db.add(new_admin)
+    await db.commit()
+    await db.refresh(new_admin)
+    
+    access_token = create_access_token(str(new_admin.id))
+    return _ok({
+        "user": {
+            "id": str(new_admin.id),
+            "email": new_admin.email,
+            "name": new_admin.name,
+            "role": new_admin.role.value
         },
         "access_token": access_token
     })

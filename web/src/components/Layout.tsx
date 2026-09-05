@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, Navigate } from "react-router-dom";
 import { LayoutDashboard, Users, Map, FileText, FileSearch, ShieldCheck, BarChart3 } from 'lucide-react';
 
 import TopHeader from './TopHeader';
@@ -15,6 +15,12 @@ const navItems = [
 
 export default function Layout() {
   const location = useLocation();
+  const token = localStorage.getItem('access_token');
+  const isDemo = import.meta.env.VITE_DEMO_MODE === 'true';
+
+  if (!token && !isDemo) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
 
   return (
     <div className="flex min-h-screen bg-background text-on-surface font-sans">
