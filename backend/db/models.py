@@ -84,6 +84,7 @@ class Farm(Base):
     owner = relationship("User", back_populates="farms", foreign_keys=[user_id])
     claims = relationship("Claim", back_populates="farm", foreign_keys="Claim.farm_id")
     soil_reports = relationship("SoilReport", back_populates="farm")
+    policies = relationship("InsurancePolicy", back_populates="farm", foreign_keys="InsurancePolicy.farm_id")
 
 class SoilReport(Base):
     __tablename__ = "soil_reports"
@@ -128,7 +129,7 @@ class InsurancePolicy(Base):
     created_at = Column(DateTime, default=func.now())
     
     user = relationship("User", foreign_keys=[user_id])
-    farm = relationship("Farm", foreign_keys=[farm_id])
+    farm = relationship("Farm", back_populates="policies", foreign_keys=[farm_id])
 
 class Claim(Base):
     __tablename__ = "claims"

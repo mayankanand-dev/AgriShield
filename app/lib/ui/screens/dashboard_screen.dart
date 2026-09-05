@@ -293,8 +293,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildFarmCard(BuildContext context, Map<String, dynamic> farm) {
-    bool hasInsurance = farm['has_insurance'] ?? false;
-    String status = farm['status'] ?? 'PENDING';
+    bool hasInsurance = farm['has_insurance'] == true || farm['active_policy'] != null || farm['policy'] != null;
+    String status = farm['status'] ?? (hasInsurance ? 'VERIFIED' : 'PENDING');
     
     num areaM2 = farm['area_m2'] ?? 0;
     double areaHa = (areaM2 / 10000.0);
@@ -435,20 +435,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        if (hasInsurance && status == 'VERIFIED')
+                        if (hasInsurance)
                           Row(
                             children: [
                               const Icon(Icons.verified, size: 20, color: AgriShieldTheme.primary),
                               const SizedBox(width: 6),
                               const Text('Insured (PMFBY)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary)),
-                            ],
-                          )
-                        else if (hasInsurance && status == 'PENDING')
-                          Row(
-                            children: [
-                              const Icon(Icons.pending_actions, size: 20, color: AgriShieldTheme.secondaryContainer),
-                              const SizedBox(width: 6),
-                              Text('Claim Pending', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange.shade800)),
                             ],
                           )
                         else
@@ -487,7 +479,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             ),
                           )
                         else
-                          const Icon(Icons.chevron_right, color: AgriShieldTheme.onSurfaceVariant),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AgriShieldTheme.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AgriShieldTheme.primary.withValues(alpha: 0.3)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.link, size: 14, color: AgriShieldTheme.primary),
+                                SizedBox(width: 4),
+                                Text('Polygon Stored', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary)),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ],

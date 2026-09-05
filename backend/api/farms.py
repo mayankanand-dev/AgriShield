@@ -13,7 +13,7 @@ from schemas.contract import Envelope, EnvelopeMeta, EnvelopeError, GeoPolygon, 
 from services.polygon_validator import validate_farm_boundary
 from services.ai_client import get_ai_client
 from db.session import get_db
-from db.models import Farm, User, UserRole
+from db.models import Farm, User, UserRole, PolicyStatus
 from api.auth import get_current_user, get_admin_user, _ok, _error
 
 router = APIRouter()
@@ -37,6 +37,23 @@ def _serialize_farm(f: Farm, include_farmer=False) -> dict:
         except Exception:
             pass
 
+    active_policy = None
+    has_insurance = False
+    if hasattr(f, "policies") and f.policies:
+        for p in f.policies:
+            if p.status == PolicyStatus.ACTIVE:
+                has_insurance = True
+                active_policy = {
+                    "id": str(p.id),
+                    "premium_amount": p.premium,
+                    "coverage_amount": p.sum_insured,
+                    "tx_hash": p.tx_hash,
+                    "canonical_hash": p.canonical_hash,
+                    "status": p.status.value,
+                    "created_at": p.created_at.isoformat() if p.created_at else None,
+                }
+                break
+
     data = {
         "id": str(f.id),
         "user_id": str(f.user_id),
@@ -46,7 +63,10 @@ def _serialize_farm(f: Farm, include_farmer=False) -> dict:
         "area_m2": f.area_m2,
         "boundary": boundary,
         "centroid": centroid,
-        "status": f.status.value if f.status else "PENDING",
+        "status": "VERIFIED" if has_insurance else (f.status.value if f.status else "PENDING"),
+        "has_insurance": has_insurance,
+        "active_policy": active_policy,
+        "policy": active_policy,
     }
     
     if include_farmer and f.owner:
@@ -76,7 +96,7 @@ async def list_farms(
     current_user: User = Depends(get_current_user)
 ):
     offset = (page - 1) * page_size
-    query = select(Farm).options(selectinload(Farm.owner)).order_by(Farm.name, Farm.id)
+    query = select(Farm).options(selectinload(Farm.owner), selectinload(Farm.policies)).order_by(Farm.name, Farm.id)
     
     if current_user.role != UserRole.ADMIN:
         query = query.where(Farm.user_id == current_user.id)
@@ -132,7 +152,7 @@ async def get_farm(
     except ValueError:
         return _error("VALIDATION_ERROR", "Invalid UUID")
 
-    query = select(Farm).options(selectinload(Farm.owner)).where(Farm.id == farm_uuid)
+    query = select(Farm).options(selectinload(Farm.owner), selectinload(Farm.policies)).where(Farm.id == farm_uuid)
     result = await db.execute(query)
     farm = result.scalar_one_or_none()
     

@@ -6,7 +6,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from db.session import get_db
-from db.models import User, UserRole, Farm, InsurancePolicy, Notification, NotificationType
+from db.models import User, UserRole, Farm, FarmStatus, InsurancePolicy, PolicyStatus, Notification, NotificationType
 from schemas.insurance import QuoteRequest, PolicyCreate
 from services.pricing_service import calculate_premium
 from services.blockchain_service import generate_tamper_proof_hash, record_hash_on_chain
@@ -110,8 +110,10 @@ async def create_policy(
         user_id=current_user.id,
         farm_id=farm.id,
         premium=policy_in.premium_amount,
-        sum_insured=policy_in.coverage_amount
+        sum_insured=policy_in.coverage_amount,
+        status=PolicyStatus.ACTIVE
     )
+    farm.status = FarmStatus.VERIFIED
     
     db.add(policy)
     await db.commit()
