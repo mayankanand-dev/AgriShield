@@ -251,25 +251,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     bool hasInsurance = farm['has_insurance'] ?? false;
     String status = farm['status'] ?? 'PENDING';
     
+    num areaM2 = farm['area_m2'] ?? 0;
+    double areaHa = (areaM2 / 10000.0);
+    double areaAcres = (areaM2 / 4046.86);
+    String areaStr = areaHa > 0 ? '${areaHa.toStringAsFixed(2)} ha (${areaAcres.toStringAsFixed(1)} ac)' : 'Surveyed Area';
+
     // Determine colors based on status
     Color topBarColor = AgriShieldTheme.primary;
-    Color riskBg = AgriShieldTheme.tertiaryFixed;
-    Color riskFg = AgriShieldTheme.onTertiaryFixed;
-    Color riskDot = AgriShieldTheme.primary;
-    String riskText = 'Low Risk';
+    Color riskBg = const Color(0xFFE8F5E9);
+    Color riskFg = const Color(0xFF2E7D32);
+    Color riskDot = const Color(0xFF4CAF50);
+    String riskText = 'Low Risk • Good Health';
 
-    if (status == 'PENDING') {
-      topBarColor = AgriShieldTheme.secondaryContainer;
-      riskBg = AgriShieldTheme.warningContainer;
-      riskFg = AgriShieldTheme.onWarningContainer;
-      riskDot = AgriShieldTheme.warningDot;
-      riskText = 'Med Risk: Pests';
-    } else if (!hasInsurance) {
-      topBarColor = Colors.transparent;
+    if (status == 'REJECTED') {
+      topBarColor = AgriShieldTheme.error;
       riskBg = AgriShieldTheme.errorContainer;
       riskFg = AgriShieldTheme.onErrorContainer;
       riskDot = AgriShieldTheme.error;
-      riskText = 'High Risk: Drought';
+      riskText = 'High Risk';
+    } else if (status == 'PENDING') {
+      topBarColor = AgriShieldTheme.primary;
+      riskBg = const Color(0xFFE8F5E9);
+      riskFg = const Color(0xFF1B5E20);
+      riskDot = const Color(0xFF2E7D32);
+      riskText = 'Registered • Low Risk';
     }
 
     return GestureDetector(
@@ -338,7 +343,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Risk & Weather Row
+                    // Status & Area Row
                     Row(
                       children: [
                         Container(
@@ -368,12 +373,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 14),
                         Row(
                           children: [
-                            const Icon(Icons.water_drop, size: 18, color: AgriShieldTheme.onSurfaceVariant),
+                            const Icon(Icons.straighten, size: 16, color: AgriShieldTheme.onSurfaceVariant),
                             const SizedBox(width: 4),
-                            const Text('Soil Moist: 65%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AgriShieldTheme.onSurfaceVariant)),
+                            Text(areaStr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AgriShieldTheme.onSurfaceVariant)),
                           ],
                         ),
                       ],

@@ -219,9 +219,8 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.of(ctx).pop(); // dismiss dialog
-                  Navigator.of(context).pop(); // pop form screen
-                  Navigator.of(context).pop(); // pop add farm map screen
-                  ref.read(bottomNavIndexProvider.notifier).state = 0; // Go to Dashboard
+                  ref.read(bottomNavIndexProvider.notifier).state = 0; // Go to Home Dashboard
+                  Navigator.of(context).popUntil((route) => route.isFirst); // Safely return to home
                 },
                 child: const Text('Back to Home', style: TextStyle(color: AgriShieldTheme.primary, fontWeight: FontWeight.bold)),
               ),
