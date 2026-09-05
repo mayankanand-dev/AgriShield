@@ -4,6 +4,8 @@ import { api } from '../api';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('admin@agrishield.com');
+  const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -13,19 +15,18 @@ export default function Login() {
     setError('');
     
     try {
-      const form = e.target as HTMLFormElement;
-      const email = (form.elements[0] as HTMLInputElement).value;
-      const password = (form.elements[1] as HTMLInputElement).value;
-      const res = await api.login({ email, password });
+      const res = await api.login({ email: email.trim(), password });
       
       // Store token
       if (res && res.data && res.data.access_token) {
         localStorage.setItem('access_token', res.data.access_token);
+        navigate('/dashboard');
+      } else {
+        setError('Login succeeded but no token was returned.');
       }
-      
-      navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      const msg = err.response?.data?.error?.message || err.response?.data?.detail || err.message || 'Login failed';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,8 @@ export default function Login() {
             <input 
               required 
               type="email" 
-              defaultValue="admin@agrishield.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             />
           </div>
@@ -69,7 +71,8 @@ export default function Login() {
             <input 
               required 
               type="password" 
-              defaultValue="admin123"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             />
           </div>

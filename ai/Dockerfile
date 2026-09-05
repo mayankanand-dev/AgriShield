@@ -20,8 +20,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
+    libgl1 \
+    libglib2.0-0 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from builder
@@ -46,12 +49,13 @@ COPY .gitignore .
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
+# Google Cloud Run dynamically injects the PORT environment variable (default: 8080)
+ENV PORT=8080
+EXPOSE 8080
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Expose port
-EXPOSE 8000
-
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run application with dynamic port
+CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}

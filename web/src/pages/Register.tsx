@@ -4,6 +4,9 @@ import { api } from '../api';
 
 export default function Register() {
   const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -13,20 +16,18 @@ export default function Register() {
     setError('');
     
     try {
-      const form = e.target as HTMLFormElement;
-      const name = (form.elements[0] as HTMLInputElement).value;
-      const email = (form.elements[1] as HTMLInputElement).value;
-      const password = (form.elements[2] as HTMLInputElement).value;
-      
-      const res = await api.register({ email, name, password });
+      const res = await api.register({ email: email.trim(), name: name.trim(), password });
       
       if (res && res.data && res.data.access_token) {
         localStorage.setItem('access_token', res.data.access_token);
+        navigate('/dashboard');
+      } else {
+        setError('Account created. Please log in.');
+        navigate('/login');
       }
-      
-      navigate('/dashboard'); // or login, but it auto-logs in if it gives a token
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      const msg = err.response?.data?.error?.message || err.response?.data?.detail || err.message || 'Registration failed';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -58,6 +59,8 @@ export default function Register() {
             <input 
               required 
               type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g. John Doe"
               className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             />
@@ -67,6 +70,8 @@ export default function Register() {
             <input 
               required 
               type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@agrishield.com"
               className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             />
@@ -76,6 +81,8 @@ export default function Register() {
             <input 
               required 
               type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             />

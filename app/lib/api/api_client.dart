@@ -6,7 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   static const String _envUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000/api/v1',
+    defaultValue: 'https://agrishield-backend-cabu.onrender.com/api/v1',
   );
 
   final String baseUrl;
