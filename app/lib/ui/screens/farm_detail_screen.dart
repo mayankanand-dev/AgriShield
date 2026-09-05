@@ -1510,26 +1510,28 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
     final rawCrop = (widget.farm['crop'] ?? _farmData['crop'])?.toString().trim().toLowerCase() ?? '';
     final isUnsown = rawCrop.isEmpty || rawCrop == 'unsown' || rawCrop == 'fallow' || rawCrop == 'none';
 
-    final String photoUrl;
+    final String assetPath;
     if (isUnsown) {
-      photoUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80';
+      assetPath = 'assets/images/unsown.webp';
     } else if (rawCrop.contains('wheat') || rawCrop.contains('gehun')) {
-      photoUrl = 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=80';
+      assetPath = 'assets/images/wheat.webp';
     } else if (rawCrop.contains('soy') || rawCrop.contains('bean')) {
-      photoUrl = 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1200&q=80';
+      assetPath = 'assets/images/soybean.webp';
     } else if (rawCrop.contains('rice') || rawCrop.contains('paddy') || rawCrop.contains('dhan')) {
-      photoUrl = 'https://images.unsplash.com/photo-1536766820879-059fec98ec0a?auto=format&fit=crop&w=1200&q=80';
+      assetPath = 'assets/images/rice.webp';
     } else if (rawCrop.contains('cotton') || rawCrop.contains('kapas')) {
-      photoUrl = 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?auto=format&fit=crop&w=1200&q=80';
+      assetPath = 'assets/images/cotton.webp';
+    } else if (rawCrop.contains('maize') || rawCrop.contains('corn') || rawCrop.contains('makka')) {
+      assetPath = 'assets/images/maize.webp';
     } else {
-      photoUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80';
+      assetPath = 'assets/images/wheat.webp';
     }
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.network(
-          photoUrl,
+        Image.asset(
+          assetPath,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => Container(
             color: AgriShieldTheme.primaryContainer,
@@ -1537,15 +1539,6 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
               child: Icon(Icons.landscape, size: 64, color: AgriShieldTheme.primary),
             ),
           ),
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return Container(
-              color: AgriShieldTheme.surfaceVariant,
-              child: const Center(
-                child: CircularProgressIndicator(color: AgriShieldTheme.primary),
-              ),
-            );
-          },
         ),
         // Gradient overlay for high-contrast header text
         DecoratedBox(

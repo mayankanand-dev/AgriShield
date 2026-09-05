@@ -606,35 +606,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final cropStr = (rawCrop ?? '').toString().trim().toLowerCase();
     final bool isUnsown = cropStr.isEmpty || cropStr == 'unsown' || cropStr == 'fallow' || cropStr == 'none';
 
-    // High quality Unsplash agriculture photos
-    final String imageUrl;
+    final String assetPath;
     if (isUnsown) {
-      // Barren / freshly plowed fertile soil field
-      imageUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=300&q=80';
+      assetPath = 'assets/images/unsown.webp';
     } else if (cropStr.contains('wheat') || cropStr.contains('gehun')) {
-      // Golden wheat field
-      imageUrl = 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=300&q=80';
+      assetPath = 'assets/images/wheat.webp';
     } else if (cropStr.contains('soy') || cropStr.contains('bean')) {
-      // Green soybean plantation
-      imageUrl = 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=300&q=80';
+      assetPath = 'assets/images/soybean.webp';
     } else if (cropStr.contains('rice') || cropStr.contains('paddy') || cropStr.contains('dhan')) {
-      // Lush green rice paddy terrace
-      imageUrl = 'https://images.unsplash.com/photo-1536766820879-059fec98ec0a?auto=format&fit=crop&w=300&q=80';
+      assetPath = 'assets/images/rice.webp';
     } else if (cropStr.contains('cotton') || cropStr.contains('kapas')) {
-      // Cotton harvest field
-      imageUrl = 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?auto=format&fit=crop&w=300&q=80';
+      assetPath = 'assets/images/cotton.webp';
     } else if (cropStr.contains('maize') || cropStr.contains('corn') || cropStr.contains('makka')) {
-      // Golden maize corn field
-      imageUrl = 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=300&q=80';
+      assetPath = 'assets/images/maize.webp';
     } else {
-      // General lush farmland
-      imageUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=300&q=80';
+      assetPath = 'assets/images/wheat.webp';
     }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: Image.network(
-        imageUrl,
+      child: Image.asset(
+        assetPath,
         width: 68,
         height: 68,
         fit: BoxFit.cover,
@@ -647,21 +639,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               isUnsown ? Icons.landscape : Icons.grass,
               color: AgriShieldTheme.primary,
               size: 28,
-            ),
-          );
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            width: 68,
-            height: 68,
-            color: AgriShieldTheme.surfaceVariant,
-            child: const Center(
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AgriShieldTheme.primary),
-              ),
             ),
           );
         },
