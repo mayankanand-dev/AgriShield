@@ -5,9 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../providers.dart';
-import '../../api/api_client.dart';
-import 'package:latlong2/latlong.dart';
 import '../../theme.dart';
+import 'farm_details_form_screen.dart';
 
 class AddFarmScreen extends ConsumerStatefulWidget {
   const AddFarmScreen({super.key});
@@ -18,11 +17,27 @@ class AddFarmScreen extends ConsumerStatefulWidget {
 
 class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
   final List<LatLng> _polygonPoints = [];
-  final ApiClient _apiClient = ApiClient();
-  bool _isSaving = false;
-  
+  final MapController _mapController = MapController();
+
+  // Madhya Pradesh coordinates (Central MP / Bhopal & Sehore belt)
+  static const LatLng _mpCenter = LatLng(23.2599, 77.4126);
+
+  // Notable MP agricultural districts for quick jump
+  final List<Map<String, dynamic>> _mpDistricts = [
+    {'name': 'Bhopal', 'center': const LatLng(23.2599, 77.4126)},
+    {'name': 'Sehore', 'center': const LatLng(23.2032, 77.0844)},
+    {'name': 'Indore', 'center': const LatLng(22.7196, 75.8577)},
+    {'name': 'Ujjain', 'center': const LatLng(23.1765, 75.7885)},
+    {'name': 'Vidisha', 'center': const LatLng(23.5251, 77.8081)},
+    {'name': 'Hoshangabad', 'center': const LatLng(22.7519, 77.7289)},
+    {'name': 'Dewas', 'center': const LatLng(22.9676, 76.0534)},
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final areaHectares = _calculateArea(_polygonPoints);
+    final areaAcres = areaHectares * 2.47105;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
@@ -31,30 +46,27 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
+              backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.85),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text(
-                'Farms',
+                'Draw Farm Boundary',
                 style: TextStyle(
                   color: AgriShieldTheme.onSurface,
                   fontWeight: FontWeight.w600,
-                  fontSize: 20,
+                  fontSize: 18,
                 ),
               ),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.translate, color: AgriShieldTheme.onSurfaceVariant),
-                  onPressed: () {},
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AgriShieldTheme.primaryContainer,
-                    child: const Icon(Icons.person, size: 20, color: Colors.white),
+                if (_polygonPoints.isNotEmpty)
+                  TextButton.icon(
+                    icon: const Icon(Icons.delete_sweep, size: 18, color: AgriShieldTheme.error),
+                    label: const Text('Clear', style: TextStyle(color: AgriShieldTheme.error, fontWeight: FontWeight.w600)),
+                    onPressed: () {
+                      setState(() => _polygonPoints.clear());
+                    },
                   ),
-                ),
+                const SizedBox(width: 8),
               ],
             ),
           ),
@@ -63,9 +75,12 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
       body: Stack(
         children: [
           FlutterMap(
+            mapController: _mapController,
             options: MapOptions(
-              initialCenter: const LatLng(20.5937, 78.9629), // Center of India
-              initialZoom: 5.0,
+              initialCenter: _mpCenter, // Centered on Madhya Pradesh
+              initialZoom: 12.0, // Zoomed in to agricultural fields
+              minZoom: 6.0,
+              maxZoom: 18.0,
               onTap: (tapPosition, point) {
                 setState(() {
                   _polygonPoints.add(point);
@@ -89,35 +104,49 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                   ],
                 ),
               MarkerLayer(
-                markers: _polygonPoints.map((point) => Marker(
-                  point: point,
-                  width: 16,
-                  height: 16,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AgriShieldTheme.surfaceContainerLowest,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AgriShieldTheme.primary, width: 4),
+                markers: _polygonPoints.asMap().entries.map((entry) {
+                  int idx = entry.key;
+                  LatLng point = entry.value;
+                  return Marker(
+                    point: point,
+                    width: 24,
+                    height: 24,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AgriShieldTheme.surfaceContainerLowest,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AgriShieldTheme.primary, width: 3),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${idx + 1}',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary),
+                        ),
+                      ),
                     ),
-                  ),
-                )).toList(),
+                  );
+                }).toList(),
               ),
             ],
           ),
-          // Top Instructions Pill
+
+          // Top Bar: Instructions & MP District Quick-Pills
           Positioned(
-            top: MediaQuery.of(context).padding.top + 76,
-            left: 24,
-            right: 24,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            top: MediaQuery.of(context).padding.top + 68,
+            left: 16,
+            right: 16,
+            child: Column(
               children: [
+                // Instruction Banner
                 ClipRRect(
                   borderRadius: BorderRadius.circular(30),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                    filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: AgriShieldTheme.surface.withValues(alpha: 0.95),
                         borderRadius: BorderRadius.circular(30),
@@ -128,21 +157,89 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.directions_walk, color: AgriShieldTheme.primary, size: 20),
+                          const Icon(Icons.touch_app, color: AgriShieldTheme.primary, size: 18),
                           const SizedBox(width: 8),
-                          const Text('Walk boundary or tap', style: TextStyle(fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurface)),
+                          Text(
+                            _polygonPoints.isEmpty
+                                ? 'Tap corners of your farm on the map'
+                                : '${_polygonPoints.length} boundary points marked',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurface),
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+
+                // MP District Selector Horizontal List
+                SizedBox(
+                  height: 34,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _mpDistricts.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final d = _mpDistricts[index];
+                      return ActionChip(
+                        label: Text(d['name'] as String),
+                        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.primary),
+                        backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.95),
+                        side: BorderSide(color: AgriShieldTheme.primary.withValues(alpha: 0.3)),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        onPressed: () {
+                          _mapController.move(d['center'] as LatLng, 13.0);
+                        },
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           ),
-          // Crosshair
-          const Center(
-            child: Icon(Icons.my_location, size: 40, color: AgriShieldTheme.primary),
+
+          // Right Map Control Floating Buttons
+          Positioned(
+            right: 16,
+            top: MediaQuery.of(context).padding.top + 170,
+            child: Column(
+              children: [
+                _buildMapFloatingBtn(
+                  icon: Icons.add,
+                  tooltip: 'Zoom In',
+                  onTap: () {
+                    final currentZoom = _mapController.camera.zoom;
+                    _mapController.move(_mapController.camera.center, currentZoom + 1);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildMapFloatingBtn(
+                  icon: Icons.remove,
+                  tooltip: 'Zoom Out',
+                  onTap: () {
+                    final currentZoom = _mapController.camera.zoom;
+                    _mapController.move(_mapController.camera.center, currentZoom - 1);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildMapFloatingBtn(
+                  icon: Icons.my_location,
+                  tooltip: 'Center Madhya Pradesh',
+                  onTap: () {
+                    _mapController.move(_mpCenter, 12.0);
+                  },
+                ),
+              ],
+            ),
           ),
+
+          // Center Crosshair for precision alignment
+          const Center(
+            child: IgnorePointer(
+              child: Icon(Icons.crop_free, size: 36, color: AgriShieldTheme.primary),
+            ),
+          ),
+
           // Floating Bottom Action Card
           Positioned(
             bottom: 24,
@@ -154,7 +251,7 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                 color: AgriShieldTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 4)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 20, offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
@@ -167,10 +264,13 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            children: [
-                              const Icon(Icons.straighten, size: 16, color: AgriShieldTheme.onSurfaceVariant),
-                              const SizedBox(width: 4),
-                              const Text('Calculated Area', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AgriShieldTheme.onSurfaceVariant)),
+                            children: const [
+                              Icon(Icons.straighten, size: 16, color: AgriShieldTheme.onSurfaceVariant),
+                              SizedBox(width: 4),
+                              Text(
+                                'Boundary Area (मध्य प्रदेश)',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AgriShieldTheme.onSurfaceVariant),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -178,18 +278,23 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: _calculateArea(_polygonPoints).toStringAsFixed(2),
-                                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary, fontFamily: 'Inter'),
+                                  text: areaHectares.toStringAsFixed(2),
+                                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary, fontFamily: 'Inter'),
                                 ),
                                 const TextSpan(
                                   text: ' Hectares',
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurfaceVariant, fontFamily: 'Inter'),
-                                )
-                              ]
-                            )
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurfaceVariant, fontFamily: 'Inter'),
+                                ),
+                                TextSpan(
+                                  text: ' (${areaAcres.toStringAsFixed(2)} Acres)',
+                                  style: const TextStyle(fontSize: 12, color: AgriShieldTheme.onSurfaceVariant, fontFamily: 'Inter'),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
+                      // Undo Last Point
                       InkWell(
                         onTap: () {
                           if (_polygonPoints.isNotEmpty) {
@@ -201,7 +306,7 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: AgriShieldTheme.secondaryContainer.withValues(alpha: 0.2),
+                            color: AgriShieldTheme.secondaryContainer.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.undo, color: AgriShieldTheme.secondaryContainer),
@@ -209,80 +314,93 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _polygonPoints.length >= 3 && !_isSaving ? () async {
-                      if (_hasSelfIntersection(_polygonPoints)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Invalid boundary: Polygon self-intersects')),
-                        );
-                        return;
-                      }
-                      
-                      setState(() => _isSaving = true);
-                      double areaHectares = _calculateArea(_polygonPoints);
-                      
-                      final response = await _apiClient.post<Map<String, dynamic>>(
-                        '/farms',
-                        {
-                          "name": "New Farm",
-                          "crop": "Unknown",
-                          "area_m2": areaHectares * 10000,
-                          "boundary": {
-                            "type": "Polygon",
-                            "coordinates": [
-                              // Close the loop
-                              [..._polygonPoints.map((p) => [p.longitude, p.latitude]), [_polygonPoints.first.longitude, _polygonPoints.first.latitude]]
-                            ]
-                          }
-                        },
-                        (json) => json as Map<String, dynamic>,
-                      );
+                  const SizedBox(height: 18),
 
-                      if (mounted) {
-                        setState(() => _isSaving = false);
-                        if (response.success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Farm boundary saved! Area: ${areaHectares.toStringAsFixed(2)} ha')),
-                          );
-                          // Clear points
-                          setState(() {
-                            _polygonPoints.clear();
-                          });
-                          // Navigate to Home tab
-                          ref.read(bottomNavIndexProvider.notifier).state = 0;
-                          // If it was pushed (not tab), pop it
-                          if (Navigator.canPop(context)) {
-                            Navigator.of(context).pop();
+                  // Continue to Farm Details Button
+                  ElevatedButton(
+                    onPressed: _polygonPoints.length >= 3
+                        ? () {
+                            if (_hasSelfIntersection(_polygonPoints)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: AgriShieldTheme.error,
+                                  content: Text('Invalid boundary: Polygon edges self-intersect. Please undo and adjust.'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final area = _calculateArea(_polygonPoints);
+                            if (area <= 0.001) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: AgriShieldTheme.error,
+                                  content: Text('Boundary area is too small. Please mark a realistic farm plot.'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            // Navigate to the Farm Details Form
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => FarmDetailsFormScreen(
+                                  polygonPoints: List.from(_polygonPoints),
+                                  areaHectares: area,
+                                  areaM2: area * 10000,
+                                ),
+                              ),
+                            );
                           }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to save farm: ${response.error?.message}')),
-                          );
-                        }
-                      }
-                    } : null,
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: AgriShieldTheme.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (_isSaving)
-                          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        else ...[
-                          const Icon(Icons.check_circle),
-                          const SizedBox(width: 8),
-                          const Text('Save Boundary'),
-                        ]
+                        Text(
+                          _polygonPoints.length < 3
+                              ? 'Tap at least 3 points (${_polygonPoints.length}/3)'
+                              : 'Next: Farm Details & Crop →',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
           )
         ],
+      ),
+    );
+  }
+
+  Widget _buildMapFloatingBtn({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: AgriShieldTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: AgriShieldTheme.primary, size: 20),
+        tooltip: tooltip,
+        padding: EdgeInsets.zero,
+        onPressed: onTap,
       ),
     );
   }
@@ -299,9 +417,9 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
 
     List<math.Point<double>> projected = [];
     for (var p in points) {
-      double x = p.longitude * math.pi / 180.0 * radius * cosLatMean;
-      double y = p.latitude * math.pi / 180.0 * radius;
-      projected.add(math.Point(x, y));
+      double x = radius * (p.longitude * math.pi / 180.0) * cosLatMean;
+      double y = radius * (p.latitude * math.pi / 180.0);
+      projected.add(math.Point<double>(x, y));
     }
 
     double area = 0.0;
@@ -310,51 +428,31 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
       area += projected[i].x * projected[j].y;
       area -= projected[j].x * projected[i].y;
     }
-    
-    // Area in square meters -> divide by 10000 for Hectares
-    return (area.abs() / 2.0) / 10000.0;
+    area = area.abs() / 2.0;
+    return area / 10000.0; // Return in hectares
   }
 
   bool _hasSelfIntersection(List<LatLng> points) {
     if (points.length < 4) return false;
     for (int i = 0; i < points.length; i++) {
-      LatLng a1 = points[i];
-      LatLng a2 = points[(i + 1) % points.length];
-      for (int j = i + 2; j < points.length; j++) {
-        if (i == 0 && j == points.length - 1) continue;
-        LatLng b1 = points[j];
-        LatLng b2 = points[(j + 1) % points.length];
-        if (_doIntersect(a1, a2, b1, b2)) return true;
+      int nextI = (i + 1) % points.length;
+      for (int j = i + 1; j < points.length; j++) {
+        int nextJ = (j + 1) % points.length;
+        if (i == j || i == nextJ || nextI == j || nextI == nextJ) continue;
+        if (_linesIntersect(points[i], points[nextI], points[j], points[nextJ])) {
+          return true;
+        }
       }
     }
     return false;
   }
 
-  bool _doIntersect(LatLng p1, LatLng q1, LatLng p2, LatLng q2) {
-    double orientation(LatLng p, LatLng q, LatLng r) {
-      double val = (q.longitude - p.longitude) * (r.latitude - q.latitude) -
-          (q.latitude - p.latitude) * (r.longitude - q.longitude);
-      if (val == 0) return 0;
-      return (val > 0) ? 1 : 2;
+  bool _linesIntersect(LatLng p1, LatLng p2, LatLng p3, LatLng p4) {
+    double ccw(LatLng a, LatLng b, LatLng c) {
+      return (c.latitude - a.latitude) * (b.longitude - a.longitude) -
+             (b.latitude - a.latitude) * (c.longitude - a.longitude);
     }
-
-    bool onSegment(LatLng p, LatLng q, LatLng r) {
-      return q.longitude <= (p.longitude > r.longitude ? p.longitude : r.longitude) &&
-          q.longitude >= (p.longitude < r.longitude ? p.longitude : r.longitude) &&
-          q.latitude <= (p.latitude > r.latitude ? p.latitude : r.latitude) &&
-          q.latitude >= (p.latitude < r.latitude ? p.latitude : r.latitude);
-    }
-
-    double o1 = orientation(p1, q1, p2);
-    double o2 = orientation(p1, q1, q2);
-    double o3 = orientation(p2, q2, p1);
-    double o4 = orientation(p2, q2, q1);
-
-    if (o1 != o2 && o3 != o4) return true;
-    if (o1 == 0 && onSegment(p1, p2, q1)) return true;
-    if (o2 == 0 && onSegment(p1, q2, q1)) return true;
-    if (o3 == 0 && onSegment(p2, p1, q2)) return true;
-    if (o4 == 0 && onSegment(p2, q1, q2)) return true;
-    return false;
+    return (ccw(p1, p3, p4) * ccw(p2, p3, p4) < 0) &&
+           (ccw(p1, p2, p3) * ccw(p1, p2, p4) < 0);
   }
 }

@@ -131,6 +131,7 @@ api_router.include_router(farms.router, prefix="/farms", tags=["farms"])
 api_router.include_router(insurance.router, prefix="/insurance", tags=["insurance"])
 api_router.include_router(claims.router, prefix="/claims", tags=["claims"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(weather.router, prefix="/weather", tags=["weather"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(files.router, prefix="/files", tags=["files"])
 

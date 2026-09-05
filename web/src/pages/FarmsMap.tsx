@@ -20,14 +20,14 @@ export default function FarmsMap() {
     api.getFarms().then(res => setFarms(res.data));
   }, []);
 
-  const center: [number, number] = [20.5937, 78.9629]; // Default center (India)
+  const center: [number, number] = [23.2599, 77.4126]; // Centered on Madhya Pradesh
 
   return (
     <div className="flex-1 flex flex-col h-full bg-surface">
       <div className="px-8 py-6 flex justify-between items-center border-b border-outline-variant bg-surface z-10">
         <div>
-          <h2 className="text-2xl font-bold text-on-surface">Global Farm Map</h2>
-          <p className="text-sm text-on-surface-variant">Real-time geographical tracking of insured properties</p>
+          <h2 className="text-2xl font-bold text-on-surface">Madhya Pradesh Farm Map</h2>
+          <p className="text-sm text-on-surface-variant">Real-time geographical tracking of insured properties across MP</p>
         </div>
         <div className="flex gap-2">
           <div className="flex items-center gap-2 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
@@ -37,7 +37,7 @@ export default function FarmsMap() {
       </div>
       
       <div className="flex-1 relative z-0">
-        <MapContainer center={center} zoom={5} className="w-full h-full">
+        <MapContainer center={center} zoom={8} className="w-full h-full">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"

@@ -63,6 +63,10 @@ class CreateFarmRequest(BaseModel):
     crop: Optional[str] = None
     sowing_date: Optional[date] = None
     boundary: GeoPolygon
+    khasra_number: Optional[str] = None
+    soil_type: Optional[str] = None
+    irrigation_type: Optional[str] = None
+    ownership_type: Optional[str] = None
 
 @router.get("")
 async def list_farms(
@@ -99,9 +103,13 @@ async def create_farm(
     points = ", ".join([f"{lon} {lat}" for lon, lat in coordinates])
     wkt_polygon = f"POLYGON(({points}))"
 
+    farm_name = req.name.strip()
+    if req.khasra_number and req.khasra_number.strip() and f"#{req.khasra_number.strip()}" not in farm_name:
+        farm_name = f"{farm_name} (Khasra #{req.khasra_number.strip()})"
+
     new_farm = Farm(
         user_id=current_user.id,
-        name=req.name,
+        name=farm_name,
         crop=req.crop,
         sowing_date=datetime.combine(req.sowing_date, datetime.min.time()) if req.sowing_date else None,
         area_m2=val_res.area_m2,
