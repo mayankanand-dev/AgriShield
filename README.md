@@ -14,33 +14,33 @@
 
 ## 📑 Table of Contents
 
-1. [Executive Summary & Problem Statement](#1-executive-summary--problem-statement)
-2. [Key Innovations & Technical Highlights](#2-key-innovations--technical-highlights)
-3. [System Architecture & Data Flow](#3-system-architecture--data-flow)
-4. [Repository Structure & Codebase Ownership](#4-repository-structure--codebase-ownership)
+1. [Executive Summary and Problem Statement](#1-executive-summary-and-problem-statement)
+2. [Key Innovations and Technical Highlights](#2-key-innovations-and-technical-highlights)
+3. [System Architecture and Data Flow](#3-system-architecture-and-data-flow)
+4. [Repository Structure and Codebase Ownership](#4-repository-structure-and-codebase-ownership)
 5. [End-to-End Operational Workflows](#5-end-to-end-operational-workflows)
 6. [Backend Integration Engine (`backend/`)](#6-backend-integration-engine-backend)
-7. [AI & Computer Vision Microservice (`ai/`)](#7-ai--computer-vision-microservice-ai)
+7. [AI & Computer Vision Microservice (`ai/`)](#7-ai-computer-vision-microservice-ai)
    - [7.1 Model 1: Multi-Source Crop Yield Prediction Regressor](#71-model-1-multi-source-crop-yield-prediction-regressor)
-   - [7.2 Model 2: PMFBY Actuarial Risk Scoring & Factor Decomposition Engine](#72-model-2-pmfby-actuarial-risk-scoring--factor-decomposition-engine)
-   - [7.3 Model 3: Deep Learning Crop Disease & Pest Identification](#73-model-3-deep-learning-crop-disease--pest-identification)
-   - [7.4 Model 4: Post-Disaster Damage Assessment & Loss Quantification](#74-model-4-post-disaster-damage-assessment--loss-quantification)
+   - [7.2 Model 2: PMFBY Actuarial Risk Scoring and Factor Decomposition Engine](#72-model-2-pmfby-actuarial-risk-scoring-and-factor-decomposition-engine)
+   - [7.3 Model 3: Deep Learning Crop Disease and Pest Identification](#73-model-3-deep-learning-crop-disease-and-pest-identification)
+   - [7.4 Model 4: Post-Disaster Damage Assessment and Loss Quantification](#74-model-4-post-disaster-damage-assessment-and-loss-quantification)
    - [7.5 Model 5: Soil Health Card OCR Parser](#75-model-5-soil-health-card-ocr-parser)
-   - [7.6 Model 6: Agronomic Advisory & Crop Recommendation Expert System](#76-model-6-agronomic-advisory--crop-recommendation-expert-system)
-   - [7.7 Data Harvesting & Remote Sensing Pipelines](#77-data-harvesting--remote-sensing-pipelines)
+   - [7.6 Model 6: Agronomic Advisory and Crop Recommendation Expert System](#76-model-6-agronomic-advisory-and-crop-recommendation-expert-system)
+   - [7.7 Data Harvesting and Remote Sensing Pipelines](#77-data-harvesting-and-remote-sensing-pipelines)
 8. [Blockchain Audit Ledger (`blockchain/`)](#8-blockchain-audit-ledger-blockchain)
-9. [Insurer & Admin Web Portal (`web/`)](#9-insurer--admin-web-portal-web)
+9. [Insurer and Admin Web Portal (`web/`)](#9-insurer-and-admin-web-portal-web)
 10. [Farmer Mobile Application (`app/`)](#10-farmer-mobile-application-app)
-11. [Two-Way Synchronization & Notification Engine](#11-two-way-synchronization--notification-engine)
-12. [Complete REST API Contract & Envelope Specification](#12-complete-rest-api-contract--envelope-specification)
-13. [Environment Configuration & Secrets](#13-environment-configuration--secrets)
-14. [Step-by-Step Installation & Local Runbook](#14-step-by-step-installation--local-runbook)
-15. [Testing & Verification Guide](#15-testing--verification-guide)
-16. [PMFBY Compliance & Hackathon Edge](#16-pmfby-compliance--hackathon-edge)
+11. [Two-Way Synchronization and Notification Engine](#11-two-way-synchronization-and-notification-engine)
+12. [Complete REST API Contract and Envelope Specification](#12-complete-rest-api-contract-and-envelope-specification)
+13. [Environment Configuration and Secrets](#13-environment-configuration-and-secrets)
+14. [Step-by-Step Installation and Local Runbook](#14-step-by-step-installation-and-local-runbook)
+15. [Testing and Verification Guide](#15-testing-and-verification-guide)
+16. [PMFBY Compliance and Hackathon Edge](#16-pmfby-compliance-and-hackathon-edge)
 
 ---
 
-## 1. Executive Summary & Problem Statement
+## 1. Executive Summary and Problem Statement
 
 ### 🌾 The PMFBY Challenge
 The **Pradhan Mantri Fasal Bima Yojana (PMFBY)** is one of the world's largest crop insurance schemes, shielding millions of Indian farmers against unavoidable natural calamities. However, its real-world implementation faces severe bottlenecks:
@@ -61,7 +61,7 @@ The **Pradhan Mantri Fasal Bima Yojana (PMFBY)** is one of the world's largest c
 
 ---
 
-## 2. Key Innovations & Technical Highlights
+## 2. Key Innovations and Technical Highlights
 
 | Feature | Technical Implementation | Benefit to Farmer & Insurer |
 |---|---|---|
@@ -76,7 +76,7 @@ The **Pradhan Mantri Fasal Bima Yojana (PMFBY)** is one of the world's largest c
 
 ---
 
-## 3. System Architecture & Data Flow
+## 3. System Architecture and Data Flow
 
 AgriShield operates on a clean separation of concerns across five distinct tiers:
 
@@ -144,7 +144,7 @@ flowchart TD
 
 ---
 
-## 4. Repository Structure & Codebase Ownership
+## 4. Repository Structure and Codebase Ownership
 
 ```
 AgriShield/
@@ -258,10 +258,10 @@ AgriShield/
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Farmer as 👨‍🌾 Farmer (Flutter App)
-    participant Backend as ⚙️ Integration API (FastAPI)
-    participant PostGIS as 🗄️ PostgreSQL / PostGIS
-    actor Admin as 🏢 Insurer Admin (React Web)
+    actor Farmer as "👨‍🌾 Farmer (Flutter App)"
+    participant Backend as "⚙️ Integration API (FastAPI)"
+    participant PostGIS as "🗄️ PostgreSQL / PostGIS"
+    actor Admin as "🏢 Insurer Admin (React Web)"
 
     Farmer->>Backend: POST /auth/register-or-login { phone }
     Backend->>PostGIS: SELECT / INSERT User (Phone anchor)
@@ -282,12 +282,14 @@ sequenceDiagram
 ### 💰 Workflow B: Actuarial Pricing, Policy Purchase & Blockchain Timestamping
 1. **Quote Request**: The farmer or insurer requests an insurance quote for a registered farm.
 2. **Actuarial Calculation**: `pricing_service.py` evaluates the crop category (Rabi, Kharif, or Commercial), retrieves state scales of finance, and computes:
-   $$\text{Sum Insured} = \text{Area (ha)} \times \text{Scale of Finance (INR/ha)}$$
-   $$\text{Farmer Premium} = \text{Sum Insured} \times \text{Statutory Cap \% (1.5\%, 2.0\%, or 5.0\%) }$$
-   $$\text{Govt Subsidy} = \text{Gross Actuarial Premium} - \text{Farmer Premium}$$
+   - $\text{Sum Insured} = \text{Area (ha)} \times \text{Scale of Finance (INR/ha)}$
+   - $\text{Farmer Premium} = \text{Sum Insured} \times \text{Statutory Cap \% (1.5\%, 2.0\%, or 5.0\%)}$
+   - $\text{Govt Subsidy} = \text{Gross Actuarial Premium} - \text{Farmer Premium}$
 3. **Policy Purchase**: `POST /insurance/policies` records an active policy bound to `farm_id` and `user_id`.
 4. **Canonical State Hashing**: The policy's immutable parameters are serialized into sorted JSON and hashed with SHA-256:
-   $$\text{canonical\_hash} = \text{SHA-256}(\text{SortKeys}(\{\text{policy\_id}, \text{user\_id}, \text{farm\_id}, \text{premium}, \text{coverage}\}))$$
+   ```text
+   canonical_hash = SHA-256(SortKeys({policy_id, user_id, farm_id, premium, coverage}))
+   ```
 5. **On-Chain Recording**: `blockchain_service.py` transmits the canonical hash to `AgriShieldRecords.sol` on Polygon Amoy, storing the resulting transaction hash (`tx_hash`) in the database.
 6. **Notification**: A confirmation notification is automatically added to the farmer's inbox.
 
@@ -301,17 +303,17 @@ sequenceDiagram
 5. **One-Click Human Adjudication**: The insurer clicks **Approve** or **Reject** (`POST /claims/{id}/review`).
 6. **Reactive Notification**: The backend updates the claim status, sets `reviewed_by` and `reviewed_at`, and automatically creates a `claim_status` notification for the farmer.
 7. **Farmer Timeline Update**: The farmer's in-app 4-stage claim timeline advances in real time:
-   $$\text{Submitted} \longrightarrow \text{AI Assessed} \longrightarrow \text{Insurer Reviewed} \longrightarrow \text{Blockchain Timestamped}$$
+   > **Claim Audit Lifecycle**: `Submitted` ➔ `AI Assessed` ➔ `Insurer Reviewed` ➔ `Blockchain Timestamped`
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Farmer as 👨‍🌾 Farmer
-    participant App as 📱 Flutter App
-    participant Backend as ⚙️ Backend API
-    participant AI as 🧠 AI Microservice
-    actor Insurer as 🕵️ Insurer Admin (Web)
-    participant Chain as ⛓️ Polygon Amoy
+    actor Farmer as "👨‍🌾 Farmer"
+    participant App as "📱 Flutter App"
+    participant Backend as "⚙️ Backend API"
+    participant AI as "🧠 AI Microservice"
+    actor Insurer as "🕵️ Insurer Admin (Web)"
+    participant Chain as "⛓️ Polygon Amoy"
 
     Farmer->>App: Capture photo & file claim (Flood / Pest)
     App->>Backend: POST /claims (Idempotency-Key, photos, incident_date)
@@ -462,7 +464,7 @@ ai/
 - **Ensemble Hyperparameters**:
   - `n_estimators`: `300` decision trees.
   - `criterion`: Squared Error ($\text{MSE}$).
-  - `max_depth`: None (nodes expanded until all leaves are pure or contain $< 2$ samples).
+  - `max_depth`: None (nodes expanded until all leaves are pure or contain fewer than 2 samples).
   - `random_state`: `42`.
   - `n_jobs`: `-1` (fully parallelized multicore execution).
 - **Preprocessing**: `ColumnTransformer` with `OneHotEncoder(handle_unknown="ignore")` for categorical crop types and `passthrough` for all numerical variables.
@@ -472,76 +474,100 @@ ai/
 | Characteristic / Feature Name | Category | Data Type | Physical Range / Units | Source / Pipeline |
 |---|---|---|---|---|
 | `crop` | Agronomic | String (Categorical) | `soybean`, `wheat`, `rice`, `maize`, `cotton`, `chickpea` | Farm Record |
-| `area_ha` | Landholding | Float | $0.5 - 100.0\text{ ha}$ | Server Geodesic PostGIS |
-| `rainfall` | Macro-Weather | Float | $150.0 - 1400.0\text{ mm}$ | OpenWeather Cumulative |
-| `rainfall_7d` | Short-Term Weather | Float | $0.0 - 180.0\text{ mm}$ | OpenWeather 7-Day History |
-| `rainfall_30d` | Medium-Term Weather| Float | $100.0 - 1500.0\text{ mm}$| OpenWeather 30-Day History|
-| `temp_mean` | Temperature | Float | $15.0 - 42.0^\circ\text{C}$ | OpenWeather Ambient Mean |
-| `temp_max` | Temperature Extreme| Float | $20.0 - 50.0^\circ\text{C}$ | OpenWeather Peak Daily |
-| `temp_min` | Temperature Extreme| Float | $5.0 - 35.0^\circ\text{C}$ | OpenWeather Min Daily |
-| `humidity` | Atmosphere | Float | $25.0 - 98.0\%$ | OpenWeather Relative Humidity|
-| `wind_speed` | Atmosphere | Float | $1.0 - 40.0\text{ km/h}$ | OpenWeather Anemometer |
-| `soil_ph` | Soil Chemistry | Float | $4.8 - 8.2\text{ pH}$ | SoilHive / OCR Soil Card |
-| `nitrogen` (N) | Soil Nutrient | Float | $60.0 - 450.0\text{ kg/ha}$ | SoilHive / OCR Soil Card |
-| `phosphorus` (P) | Soil Nutrient | Float | $5.0 - 60.0\text{ kg/ha}$ | SoilHive / OCR Soil Card |
-| `potassium` (K) | Soil Nutrient | Float | $50.0 - 350.0\text{ kg/ha}$ | SoilHive / OCR Soil Card |
-| `organic_carbon` | Soil Health | Float | $0.15 - 2.0\%$ | SoilHive Lab Data |
-| `ndvi_mean` | Satellite Index | Float | $0.10 - 0.95$ | Sentinel-2 Band 8 & Band 4 |
-| `ndvi_min` | Satellite Index | Float | $-1.0 - 1.0$ | Sentinel-2 Pixel Dispersion |
-| `ndvi_max` | Satellite Index | Float | $-1.0 - 1.0$ | Sentinel-2 Peak Pixel |
-| `ndvi_std` | Satellite Index | Float | $0.02 - 0.25$ | Sentinel-2 Spatial Variance |
-| `ndwi_mean` | Satellite Index | Float | $-0.80 - 0.60$ | Sentinel-2 Band 8 & Band 11 |
-| `ndwi_min` | Satellite Index | Float | $-1.0 - 1.0$ | Sentinel-2 Pixel Dispersion |
-| `ndwi_max` | Satellite Index | Float | $-1.0 - 1.0$ | Sentinel-2 Peak Moisture |
-| `ndmi_mean` | Satellite Index | Float | $-0.40 - 0.70$ | Sentinel-2 Band 8 & Band 12 |
-| `ndmi_min` | Satellite Index | Float | $-1.0 - 1.0$ | Sentinel-2 Pixel Dispersion |
-| `ndmi_max` | Satellite Index | Float | $-1.0 - 1.0$ | Sentinel-2 Peak Water Stress|
-| `growth_stage` | Phenology | Integer | $1 - 5$ (Vegetative to Mature) | Farmer Input / Sowing Date |
-| `sowing_delay_days` | Phenology Stress | Float | $-10.0 - 30.0\text{ days}$ | Deviation from Optimal Sowing|
-| `heat_stress_days` | Thermal Stress | Float | $\max(T_{\max} - 35, 0)\text{ days}$| Calculated Agro-Climatic |
-| `excessive_rainfall_index`| Flood Stress | Float | $\max(R_{\text{7d}} - 90, 0) / 10$| Calculated Inundation Factor |
-| `disease_probability`| Pathogen Stress | Float | $0.01 - 0.98$ | Fungal Favorable Climatic Index|
-| `historical_loss` | Actuarial History | Float | $0.0 - 1.0$ | Revenue Record / CCE Survey |
+| `area_ha` | Landholding | Float | 0.5 – 100.0 ha | Server Geodesic PostGIS |
+| `rainfall` | Macro-Weather | Float | 150.0 – 1,400.0 mm | OpenWeather Cumulative |
+| `rainfall_7d` | Short-Term Weather | Float | 0.0 – 180.0 mm | OpenWeather 7-Day History |
+| `rainfall_30d` | Medium-Term Weather| Float | 100.0 – 1,500.0 mm | OpenWeather 30-Day History|
+| `temp_mean` | Temperature | Float | 15.0 – 42.0 °C | OpenWeather Ambient Mean |
+| `temp_max` | Temperature Extreme| Float | 20.0 – 50.0 °C | OpenWeather Peak Daily |
+| `temp_min` | Temperature Extreme| Float | 5.0 – 35.0 °C | OpenWeather Min Daily |
+| `humidity` | Atmosphere | Float | 25.0 – 98.0% | OpenWeather Relative Humidity|
+| `wind_speed` | Atmosphere | Float | 1.0 – 40.0 km/h | OpenWeather Anemometer |
+| `soil_ph` | Soil Chemistry | Float | 4.8 – 8.2 pH | SoilHive / OCR Soil Card |
+| `nitrogen` (N) | Soil Nutrient | Float | 60.0 – 450.0 kg/ha | SoilHive / OCR Soil Card |
+| `phosphorus` (P) | Soil Nutrient | Float | 5.0 – 60.0 kg/ha | SoilHive / OCR Soil Card |
+| `potassium` (K) | Soil Nutrient | Float | 50.0 – 350.0 kg/ha | SoilHive / OCR Soil Card |
+| `organic_carbon` | Soil Health | Float | 0.15 – 2.0% | SoilHive Lab Data |
+| `ndvi_mean` | Satellite Index | Float | 0.10 – 0.95 | Sentinel-2 Band 8 & Band 4 |
+| `ndvi_min` | Satellite Index | Float | -1.0 to 1.0 | Sentinel-2 Pixel Dispersion |
+| `ndvi_max` | Satellite Index | Float | -1.0 to 1.0 | Sentinel-2 Peak Pixel |
+| `ndvi_std` | Satellite Index | Float | 0.02 – 0.25 | Sentinel-2 Spatial Variance |
+| `ndwi_mean` | Satellite Index | Float | -0.80 to 0.60 | Sentinel-2 Band 8 & Band 11 |
+| `ndwi_min` | Satellite Index | Float | -1.0 to 1.0 | Sentinel-2 Pixel Dispersion |
+| `ndwi_max` | Satellite Index | Float | -1.0 to 1.0 | Sentinel-2 Peak Moisture |
+| `ndmi_mean` | Satellite Index | Float | -0.40 to 0.70 | Sentinel-2 Band 8 & Band 12 |
+| `ndmi_min` | Satellite Index | Float | -1.0 to 1.0 | Sentinel-2 Pixel Dispersion |
+| `ndmi_max` | Satellite Index | Float | -1.0 to 1.0 | Sentinel-2 Peak Water Stress|
+| `growth_stage` | Phenology | Integer | 1 – 5 (Vegetative to Mature) | Farmer Input / Sowing Date |
+| `sowing_delay_days` | Phenology Stress | Float | -10.0 – 30.0 days | Deviation from Optimal Sowing|
+| `heat_stress_days` | Thermal Stress | Float | max(T_max - 35, 0) days | Calculated Agro-Climatic |
+| `excessive_rainfall_index`| Flood Stress | Float | max(R_7d - 90, 0) / 10 | Calculated Inundation Factor |
+| `disease_probability`| Pathogen Stress | Float | 0.01 – 0.98 | Fungal Favorable Climatic Index|
+| `historical_loss` | Actuarial History | Float | 0.0 – 1.0 | Revenue Record / CCE Survey |
 
 #### Mathematical Formulations & Characteristic Weights
 The ground-truth agricultural training physics models yield as a base crop capacity modulated by environmental multipliers and abiotic stress penalties:
 
 1. **Crop Baseline Potential ($Y_{\text{base}}$)**:
-   $$\text{Soybean}: 2.7\text{ t/ha} \quad|\quad \text{Wheat}: 3.6\text{ t/ha} \quad|\quad \text{Rice}: 4.1\text{ t/ha}$$
-   $$\text{Maize}: 4.4\text{ t/ha} \quad|\quad \text{Cotton}: 1.8\text{ t/ha} \quad|\quad \text{Chickpea}: 2.1\text{ t/ha}$$
+   - Soybean: $2.7\text{ t/ha}$ | Wheat: $3.6\text{ t/ha}$ | Rice: $4.1\text{ t/ha}$
+   - Maize: $4.4\text{ t/ha}$ | Cotton: $1.8\text{ t/ha}$ | Chickpea: $2.1\text{ t/ha}$
 
 2. **Soil Quality Score ($S_{\text{soil}}$)** (Weight: $0.20$):
-   $$S_{\text{soil}} = 0.55 + 0.20 \cdot \left(\frac{\text{Nitrogen}}{300.0}\right) + 0.10 \cdot \left(\frac{\text{Phosphorus}}{30.0}\right) + 0.10 \cdot \left(\frac{\text{Potassium}}{200.0}\right)$$
+
+   $$
+   S_{\text{soil}} = 0.55 + 0.20 \cdot \left(\frac{\text{Nitrogen}}{300.0}\right) + 0.10 \cdot \left(\frac{\text{Phosphorus}}{30.0}\right) + 0.10 \cdot \left(\frac{\text{Potassium}}{200.0}\right)
+   $$
 
 3. **Precipitation Suitability ($S_{\text{rain}}$)** (Weight: $0.20$, Gaussian centered at $700\text{ mm}$):
-   $$S_{\text{rain}} = \exp\left( -\left(\frac{\text{Rainfall} - 700}{350}\right)^2 \right)$$
+
+   $$
+   S_{\text{rain}} = \exp\left( -\left(\frac{\text{Rainfall} - 700}{350}\right)^2 \right)
+   $$
 
 4. **Thermal Suitability ($S_{\text{temp}}$)** (Weight: $0.20$, Gaussian centered at $27^\circ\text{C}$):
-   $$S_{\text{temp}} = \exp\left( -\left(\frac{T_{\text{mean}} - 27}{7}\right)^2 \right)$$
+
+   $$
+   S_{\text{temp}} = \exp\left( -\left(\frac{T_{\text{mean}} - 27}{7}\right)^2 \right)
+   $$
 
 5. **Remote Sensing Vegetation Vigor ($S_{\text{veg}}$)** (Weight: $0.45$):
-   $$S_{\text{veg}} = 0.55 + 0.75 \cdot (\text{NDVI}_{\text{mean}} - 0.55) + 0.35 \cdot \text{NDMI}_{\text{mean}} + 0.15 \cdot (\text{NDWI}_{\text{mean}} + 0.15)$$
+
+   $$
+   S_{\text{veg}} = 0.55 + 0.75 \cdot (\text{NDVI}_{\text{mean}} - 0.55) + 0.35 \cdot \text{NDMI}_{\text{mean}} + 0.15 \cdot (\text{NDWI}_{\text{mean}} + 0.15)
+   $$
 
 6. **Stress Penalties ($P_{\text{stress}}$)**:
-   $$P_{\text{heat}} = 0.035 \times \text{heat\_stress\_days}$$
-   $$P_{\text{flood}} = 0.020 \times \text{excessive\_rainfall\_index}$$
-   $$P_{\text{sow}} = 0.008 \times \max(\text{sowing\_delay\_days}, 0)$$
-   $$P_{\text{stress}} = P_{\text{heat}} + P_{\text{flood}} + P_{\text{sow}}$$
+   - Heat Stress Penalty: $P_{\text{heat}} = 0.035 \times \text{Heat Stress Days}$
+   - Flood Stress Penalty: $P_{\text{flood}} = 0.020 \times \text{Excessive Rainfall Index}$
+   - Sowing Delay Penalty: $P_{\text{sow}} = 0.008 \times \max(\text{Sowing Delay Days}, 0)$
+   - Aggregate Abiotic Penalty: $P_{\text{stress}} = P_{\text{heat}} + P_{\text{flood}} + P_{\text{sow}}$
 
 7. **Composite Yield Formulation**:
-   $$\text{Multiplier} = \text{clip}\Big(0.65 + 0.20 S_{\text{soil}} + 0.20 S_{\text{rain}} + 0.20 S_{\text{temp}} + 0.45 S_{\text{veg}} - P_{\text{stress}},\ 0.35,\ 1.45\Big)$$
-   $$\text{Yield}_{\text{t/ha}} = \text{clip}\Big( Y_{\text{base}} \times \text{Multiplier} + \mathcal{N}(0, 0.22),\ 0.2,\ 8.5 \Big)$$
+
+   $$
+   \text{Multiplier} = \text{clip}\Big(0.65 + 0.20 S_{\text{soil}} + 0.20 S_{\text{rain}} + 0.20 S_{\text{temp}} + 0.45 S_{\text{veg}} - P_{\text{stress}},\ 0.35,\ 1.45\Big)
+   $$
+
+   $$
+   \text{Yield}_{\text{t/ha}} = \text{clip}\Big( Y_{\text{base}} \times \text{Multiplier} + \mathcal{N}(0, 0.22),\ 0.2,\ 8.5 \Big)
+   $$
 
 #### Ensemble Confidence Metric Calculation
 At inference time, confidence is derived dynamically from the **inter-tree coefficient of variation ($\text{CV}$)** across all 300 decision tree estimators ($T_1, T_2, \dots, T_{300}$):
-$$\mu_{\text{trees}} = \frac{1}{300} \sum_{i=1}^{300} T_i(x), \quad \sigma_{\text{trees}} = \sqrt{\frac{1}{300} \sum_{i=1}^{300} \big(T_i(x) - \mu_{\text{trees}}\big)^2}$$
-$$\text{CV} = \frac{\sigma_{\text{trees}}}{\mu_{\text{trees}} + \epsilon}$$
-$$\text{Confidence} = \text{clip}(1.0 - \text{CV},\ 0.0,\ 1.0)$$
-*If $\text{Confidence} < 0.70$, the prediction is automatically flagged with `low_confidence: true`.*
+
+$$
+\mu_{\text{trees}} = \frac{1}{300} \sum_{i=1}^{300} T_i(x), \quad \sigma_{\text{trees}} = \sqrt{\frac{1}{300} \sum_{i=1}^{300} \big(T_i(x) - \mu_{\text{trees}}\big)^2}
+$$
+
+$$
+\text{CV} = \frac{\sigma_{\text{trees}}}{\mu_{\text{trees}} + \epsilon}, \quad \text{Confidence} = \text{clip}(1.0 - \text{CV},\ 0.0,\ 1.0)
+$$
+
+*If $\text{Confidence} \lt 0.70$, the prediction is automatically flagged with `low_confidence: true`.*
 
 ---
 
-### 7.2 Model 2: PMFBY Actuarial Risk Scoring & Factor Decomposition Engine
+### 7.2 Model 2: PMFBY Actuarial Risk Scoring and Factor Decomposition Engine
 
 #### Model Overview & Pipeline
 - **Target Variable**: Composite Farm Calamity Risk ($0.0 - 1.0$ at API boundary, trained on $0 - 100$ scale).
@@ -557,72 +583,99 @@ $$\text{Confidence} = \text{clip}(1.0 - \text{CV},\ 0.0,\ 1.0)$$
 | `crop` | Agronomic | Baseline Susceptibility | One-Hot Encoded crop class |
 | `area_ha` | Exposure | Risk Aggregation Scale | Farm size in hectares |
 | `rainfall` | Hazard Driver | Drought / Inundation | Annual / seasonal precipitation in mm |
-| `temp_mean` | Thermal Hazard | Heat Stress Risk | Mean ambient temperature ($^\circ\text{C}$) |
-| `humidity` | Pathogen Vector | Microclimate Factor | Mean relative humidity ($25 - 98\%$) |
-| `soil_ph` | Edaphic Hazard | Acid/Alkali Degradation | Soil pH ($4.8 - 8.2$) |
-| `nitrogen` | Soil Nutrition | Crop Resilience | Available Nitrogen ($\text{kg/ha}$) |
-| `phosphorus` | Soil Nutrition | Root Architecture | Available Phosphorus ($\text{kg/ha}$) |
-| `potassium` | Soil Nutrition | Drought Resistance | Available Potassium ($\text{kg/ha}$) |
-| `ndvi_mean` | Macro-Observation| Vegetative Vigor Deficit| Canopy density ($0.10 - 0.95$) |
-| `ndwi_mean` | Macro-Observation| Waterlogging Index | Water surface reflection ($-0.80 - 0.60$) |
-| `ndmi_mean` | Macro-Observation| Canopy Moisture Stress | Moisture index ($-0.40 - 0.70$) |
+| `temp_mean` | Thermal Hazard | Heat Stress Risk | Mean ambient temperature (°C) |
+| `humidity` | Pathogen Vector | Microclimate Factor | Mean relative humidity (25% – 98%) |
+| `soil_ph` | Edaphic Hazard | Acid/Alkali Degradation | Soil pH (4.8 – 8.2) |
+| `nitrogen` | Soil Nutrition | Crop Resilience | Available Nitrogen (kg/ha) |
+| `phosphorus` | Soil Nutrition | Root Architecture | Available Phosphorus (kg/ha) |
+| `potassium` | Soil Nutrition | Drought Resistance | Available Potassium (kg/ha) |
+| `ndvi_mean` | Macro-Observation| Vegetative Vigor Deficit| Canopy density (0.10 – 0.95) |
+| `ndwi_mean` | Macro-Observation| Waterlogging Index | Water surface reflection (-0.80 to 0.60) |
+| `ndmi_mean` | Macro-Observation| Canopy Moisture Stress | Moisture index (-0.40 to 0.70) |
 | `yield_prediction` | Agronomic Health| Loss Potential | Predicted yield from Model 1 |
-| `disease_probability`| Biological Hazard| Pathogen Pressure | Climatic disease suitability ($0.01 - 0.98$) |
-| `historical_loss` | Loss History | Past Calamity Exposure | Historical actuarial claim ratio ($0.0 - 1.0$) |
+| `disease_probability`| Biological Hazard| Pathogen Pressure | Climatic disease suitability (0.01 – 0.98) |
+| `historical_loss` | Loss History | Past Calamity Exposure | Historical actuarial claim ratio (0.0 – 1.0) |
 
 #### The 5 Latent Risk Component Formulations & Weights
 The latent risk score aggregates 5 independent risk pillars:
 
-$$\text{Latent Score} = \mathcal{R}_{\text{weather}} + \mathcal{R}_{\text{crop\_health}} + \mathcal{R}_{\text{moisture}} + \mathcal{R}_{\text{soil}} + \mathcal{R}_{\text{historical}}$$
+$$
+\text{Latent Score} = \mathcal{R}_{\text{weather}} + \mathcal{R}_{\text{crop}} + \mathcal{R}_{\text{moisture}} + \mathcal{R}_{\text{soil}} + \mathcal{R}_{\text{historical}}
+$$
 
 1. **Weather Hazard Component ($\mathcal{R}_{\text{weather}}$)** (Effective Weight: $25\%$):
-   $$\mathcal{R}_{\text{weather}} = 0.30 \cdot \text{clip}\left(\frac{\text{Heat Stress Days}}{10}, 0, 1\right) + 0.20 \cdot \text{clip}\left(\frac{\text{Excessive Rain Index}}{8}, 0, 1\right)$$
 
-2. **Crop Health & Biological Component ($\mathcal{R}_{\text{crop\_health}}$)** (Effective Weight: $35\%$):
-   $$\mathcal{R}_{\text{crop\_health}} = 0.35 \cdot \text{Disease Probability} + 0.35 \cdot \text{clip}\left(\frac{0.75 - \text{NDVI}_{\text{mean}}}{0.50}, 0, 1\right)$$
+   $$
+   \mathcal{R}_{\text{weather}} = 0.30 \cdot \text{clip}\left(\frac{\text{Heat Stress Days}}{10}, 0, 1\right) + 0.20 \cdot \text{clip}\left(\frac{\text{Excessive Rain Index}}{8}, 0, 1\right)
+   $$
+
+2. **Crop Health & Biological Component ($\mathcal{R}_{\text{crop}}$)** (Effective Weight: $35\%$):
+
+   $$
+   \mathcal{R}_{\text{crop}} = 0.35 \cdot \text{Disease Probability} + 0.35 \cdot \text{clip}\left(\frac{0.75 - \text{NDVI}_{\text{mean}}}{0.50}, 0, 1\right)
+   $$
+
    Where Disease Probability is computed through logistic activation of climatic factors:
-   $$z_{\text{disease}} = -2.0 + 0.035(\text{Humidity} - 65) + 0.45\left(\frac{R_{\text{7d}}}{50}\right) - 2.0(\text{NDVI} - 0.55) + 0.08(T_{\text{mean}} - 25)$$
-   $$\text{Disease Probability} = \text{clip}\left(\frac{1}{1 + e^{-z_{\text{disease}}}},\ 0.01,\ 0.98\right)$$
+
+   $$
+   z_{\text{disease}} = -2.0 + 0.035(\text{Humidity} - 65) + 0.45\left(\frac{R_{\text{7d}}}{50}\right) - 2.0(\text{NDVI} - 0.55) + 0.08(T_{\text{mean}} - 25)
+   $$
+
+   $$
+   \text{Disease Probability} = \text{clip}\left(\frac{1}{1 + e^{-z_{\text{disease}}}},\ 0.01,\ 0.98\right)
+   $$
 
 3. **Moisture Stress Component ($\mathcal{R}_{\text{moisture}}$)** (Effective Weight: $20\%$):
-   $$\mathcal{R}_{\text{moisture}} = 0.25 \cdot \text{clip}\left(\frac{0.05 - \text{NDMI}_{\text{mean}}}{0.40}, 0, 1\right)$$
+
+   $$
+   \mathcal{R}_{\text{moisture}} = 0.25 \cdot \text{clip}\left(\frac{0.05 - \text{NDMI}_{\text{mean}}}{0.40}, 0, 1\right)
+   $$
 
 4. **Soil Degradation Component ($\mathcal{R}_{\text{soil}}$)** (Effective Weight: $20\%$):
-   $$\text{pH Risk} = \text{clip}\left(\frac{|\text{Soil pH} - 6.7|}{1.8}, 0, 1\right)$$
-   $$\text{Nutrient Risk} = \text{clip}\left(1.0 - \frac{\frac{\text{N}}{300} + \frac{\text{P}}{30} + \frac{\text{K}}{200}}{3}, 0, 1\right)$$
-   $$\mathcal{R}_{\text{soil}} = 0.20 \cdot \text{pH Risk} + 0.20 \cdot \text{Nutrient Risk}$$
+   - $\text{pH Risk} = \text{clip}\left(\frac{|\text{Soil pH} - 6.7|}{1.8}, 0, 1\right)$
+   - $\text{Nutrient Risk} = \text{clip}\left(1.0 - \frac{\frac{\text{N}}{300} + \frac{\text{P}}{30} + \frac{\text{K}}{200}}{3}, 0, 1\right)$
+   - $\mathcal{R}_{\text{soil}} = 0.20 \cdot \text{pH Risk} + 0.20 \cdot \text{Nutrient Risk}$
 
 5. **Historical Exposure Component ($\mathcal{R}_{\text{historical}}$)** (Effective Weight: $25\%$):
-   $$\mathcal{R}_{\text{historical}} = 0.25 \cdot \text{Historical Loss Rate}$$
+
+   $$
+   \mathcal{R}_{\text{historical}} = 0.25 \cdot \text{Historical Loss Rate}
+   $$
 
 #### Final Sigmoidal Risk Scaling
 The composite latent score is passed through a steep logistic function calibrated to Indian agricultural conditions:
-$$\text{Raw Score} = \text{clip}\Big(100.0 \cdot \sigma\big(5.0 \cdot (\text{Latent Score} - 0.38)\big) + \mathcal{N}(0, 4.0),\ 0.0,\ 100.0\Big)$$
-$$\text{API Risk Score} = \frac{\text{Raw Score}}{100.0} \in [0.0,\ 1.0]$$
+
+$$
+\text{Raw Score} = \text{clip}\Big(100.0 \cdot \sigma\big(5.0 \cdot (\text{Latent Score} - 0.38)\big) + \mathcal{N}(0, 4.0),\ 0.0,\ 100.0\Big)
+$$
+
+$$
+\text{API Risk Score} = \frac{\text{Raw Score}}{100.0} \in [0.0,\ 1.0]
+$$
 
 #### Risk Band Classification
-| Risk Band | Score Interval ($\text{Score} \in [0, 1]$) | PMFBY Actuarial Interpretation | Insurance Pricing Impact |
+| Risk Band | Score Interval | PMFBY Actuarial Interpretation | Insurance Pricing Impact |
 |---|---|---|---|
-| `LOW` | $[0.00, 0.25)$ | Optimal microclimate, healthy vigor, balanced soil | Standard statutory rate (1.5% - 2.0%) |
-| `MEDIUM` | $[0.25, 0.50)$ | Minor moisture deficit or historical loss history | Standard statutory rate; advisory warnings |
-| `HIGH` | $[0.50, 0.75)$ | Significant pathogen pressure, heat stress, or pH deviation | Elevated underwriting scrutiny; premium surcharge |
-| `CRITICAL` | $[0.75, 1.00]$ | Severe drought, waterlogging inundation, or crop failure | Mandatory field validation; expedited claim reserve |
+| `LOW` | `0.00 – 0.25` | Optimal microclimate, healthy vigor, balanced soil | Standard statutory rate (1.5% - 2.0%) |
+| `MEDIUM` | `0.25 – 0.50` | Minor moisture deficit or historical loss history | Standard statutory rate; advisory warnings |
+| `HIGH` | `0.50 – 0.75` | Significant pathogen pressure, heat stress, or pH deviation | Elevated underwriting scrutiny; premium surcharge |
+| `CRITICAL` | `0.75 – 1.00` | Severe drought, waterlogging inundation, or crop failure | Mandatory field validation; expedited claim reserve |
 
 #### Inference-Time Factor Attribution Decomposition
 `_derive_factors(features)` inspects the exact physical values and dynamically produces human-readable contributing factors with quantitative weights:
-- **Flood Hazard**: If $\text{Rainfall} > 1100\text{ mm} \implies \text{Contribution} = \min(0.35, (\text{Rainfall} - 1100) / 1000)$.
-- **Drought Hazard**: If $\text{Rainfall} < 300\text{ mm} \implies \text{Contribution} = \min(0.30, (300 - \text{Rainfall}) / 600)$.
-- **Heat Stress**: If $T_{\text{mean}} > 35^\circ\text{C} \implies \text{Contribution} = \min(0.25, (T_{\text{mean}} - 35) / 28)$.
-- **Vegetative Deficit**: If $\text{NDVI} < 0.40 \implies \text{Contribution} = \min(0.30, (0.40 - \text{NDVI}) / 0.40)$.
-- **Disease Hazard**: If $\text{Disease Prob} > 0.35 \implies \text{Contribution} = \min(0.40, \text{Disease Prob} \times 0.50)$.
-- **Waterlogging**: If $\text{NDWI} > 0.25 \implies \text{Contribution} = \min(0.25, (\text{NDWI} - 0.25) / 0.55)$.
-- **Moisture Deficit**: If $\text{NDMI} < 0.05 \implies \text{Contribution} = \min(0.20, (0.05 - \text{NDMI}) / 0.45)$.
-- **pH Deviation**: If $|\text{pH} - 6.7| > 1.0 \implies \text{Contribution} = \min(0.20, |\text{pH} - 6.7| / 3.6)$.
-- **Nutrient Deficit**: If $\text{Nutrient Index} < 0.60 \implies \text{Contribution} = \min(0.30, (1.0 - \text{Nutrient Index}) \times 0.40)$.
+- **Flood Hazard**: If $\text{Rainfall} \gt 1100\text{ mm} \implies \text{Contribution} = \min(0.35, (\text{Rainfall} - 1100) / 1000)$.
+- **Drought Hazard**: If $\text{Rainfall} \lt 300\text{ mm} \implies \text{Contribution} = \min(0.30, (300 - \text{Rainfall}) / 600)$.
+- **Heat Stress**: If $T_{\text{mean}} \gt 35^\circ\text{C} \implies \text{Contribution} = \min(0.25, (T_{\text{mean}} - 35) / 28)$.
+- **Vegetative Deficit**: If $\text{NDVI} \lt 0.40 \implies \text{Contribution} = \min(0.30, (0.40 - \text{NDVI}) / 0.40)$.
+- **Disease Hazard**: If $\text{Disease Prob} \gt 0.35 \implies \text{Contribution} = \min(0.40, \text{Disease Prob} \times 0.50)$.
+- **Waterlogging**: If $\text{NDWI} \gt 0.25 \implies \text{Contribution} = \min(0.25, (\text{NDWI} - 0.25) / 0.55)$.
+- **Moisture Deficit**: If $\text{NDMI} \lt 0.05 \implies \text{Contribution} = \min(0.20, (0.05 - \text{NDMI}) / 0.45)$.
+- **pH Deviation**: If $|\text{pH} - 6.7| \gt 1.0 \implies \text{Contribution} = \min(0.20, |\text{pH} - 6.7| / 3.6)$.
+- **Nutrient Deficit**: If $\text{Nutrient Index} \lt 0.60 \implies \text{Contribution} = \min(0.30, (1.0 - \text{Nutrient Index}) \times 0.40)$.
 
 ---
 
-### 7.3 Model 3: Deep Learning Crop Disease & Pest Identification
+### 7.3 Model 3: Deep Learning Crop Disease and Pest Identification
 
 #### Architecture & Transfer Learning Setup
 - **Backbone**: **EfficientNet-B0** pre-trained on ImageNet-1k (`IMAGENET1K_V1`).
@@ -630,7 +683,7 @@ $$\text{API Risk Score} = \frac{\text{Raw Score}}{100.0} \in [0.0,\ 1.0]$$
 - **Model File**: `ai/models/crop_health/model.pt` (Weights Size: **16.38 MB**).
 - **Classes**: 15 distinct classes covering major staple and horticultural crops.
 - **Head Replacement**: Backbone features are pooled to 1280 dimensions; classifier layer replaced by:
-  $$\text{Classifier Head} = \text{nn.Sequential}\big(\text{nn.Dropout}(p=0.2),\ \text{nn.Linear}(1280,\ 15)\big)$$
+  `Classifier Head = nn.Sequential(nn.Dropout(p=0.2), nn.Linear(1280, 15))`
 - **Training Regimen**:
   - Loss: `CrossEntropyLoss`
   - Optimizer: `AdamW(lr=1e-3, weight_decay=1e-4)`
@@ -666,7 +719,7 @@ $$\text{API Risk Score} = \frac{\text{Raw Score}}{100.0} \in [0.0,\ 1.0]$$
 
 ---
 
-### 7.4 Model 4: Post-Disaster Damage Assessment & Loss Quantification
+### 7.4 Model 4: Post-Disaster Damage Assessment and Loss Quantification
 
 #### Architecture & Quantification Setup
 - **Backbone**: **EfficientNet-B0** pre-trained on ImageNet-1k.
@@ -679,7 +732,11 @@ $$\text{API Risk Score} = \frac{\text{Raw Score}}{100.0} \in [0.0,\ 1.0]$$
 - **Damage Percentage Mapping (`DAMAGE_PCT_MAP`)**:
   - `non_damaged`: $0.0\%$ base damage.
   - `damaged`: $60.0\%$ base damage, scaled dynamically by the softmax prediction probability $P(\text{damaged})$:
-    $$\text{Damage \%} = \text{round}\Big(P(\text{damaged}) \times 65.0\% + \Delta_{\text{calamity}},\ 1\Big)$$
+
+     $$
+     \text{Damage \%} = \text{round}\Big(P(\text{damaged}) \times 65.0\% + \Delta_{\text{calamity}},\ 1\Big)
+     $$
+
     Where $\Delta_{\text{calamity}}$ applies empirical severity offsets based on incident type (Hailstorm: $+15\%$, Severe Flood: $+20\%$, Drought: $+10\%$).
 - **Cryptographic Claim Seal**: The output damage percentage and model confidence are immediately formatted into the canonical JSON dictionary and signed on Polygon Amoy.
 
@@ -699,58 +756,75 @@ $$\text{API Risk Score} = \frac{\text{Raw Score}}{100.0} \in [0.0,\ 1.0]$$
      - **Potassium (K)**: `r"(?:potassium|available\s*K)[^\d]*(\d+\.?\d*)"`
      - **pH Value**: `r"pH[^\d]*(\d+\.?\d*)"`
   4. **Dynamic Confidence Formula**:
-     $$\text{Found Count} = \sum_{k \in \{N, P, K, pH\}} \mathbb{I}(k \text{ extracted successfully})$$
-     $$\text{OCR Confidence} = 0.50 + \left(\frac{\text{Found Count}}{4}\right) \times 0.45$$
+
+      $$
+      \text{Found Count} = \sum_{k \in \{N, P, K, pH\}} \mathbb{I}(k \text{ extracted successfully})
+      $$
+      $$
+      \text{OCR Confidence} = 0.50 + \left(\frac{\text{Found Count}}{4}\right) \times 0.45
+      $$
+
   5. **High-Availability Fallback**: If any nutrient value cannot be resolved due to document degradation, the service transparently injects agro-climatic regional baseline averages ($\text{N}: 45.0\text{ kg/ha}, \text{P}: 22.0\text{ kg/ha}, \text{K}: 180.0\text{ kg/ha}, \text{pH}: 6.5$) while flagging the confidence accordingly.
 
 ---
 
-### 7.6 Model 6: Agronomic Advisory & Crop Recommendation Expert System
+### 7.6 Model 6: Agronomic Advisory and Crop Recommendation Expert System
 
 #### Decision Logic for Sown vs. Unsown Plots
 Implemented in `ai/app/routes/advisory.py`, the advisory engine operates in two operational modes:
 
 ```mermaid
 graph TD
-    Start[Farm Context Ingestion] --> SownCheck{Is Plot Sown?}
+    Start["Farm Context Ingestion"] --> SownCheck{"Is Plot Sown?"}
     
-    SownCheck -- Sown Field --> SownAdvisory[Crop-Specific Agronomic Protocols]
-    SownAdvisory --> StageAdvisory[Tillering / Flowering / Pod Filling Recommendations]
-    SownAdvisory --> EnvWarnings[Environmental Abiotic Stress Checks]
+    SownCheck -->|"Sown Field"| SownAdvisory["Crop-Specific Agronomic Protocols"]
+    SownAdvisory --> StageAdvisory["Tillering / Flowering / Pod Filling Recommendations"]
+    SownAdvisory --> EnvWarnings["Environmental Abiotic Stress Checks"]
     
-    SownCheck -- Unsown / Fallow --> SeasonCheck{Weather & Soil Conditions}
-    SeasonCheck -- Rainfall > 100mm OR Temp > 28°C --> KharifRec[Kharif Suite: Soybean Primary, Paddy, Cotton, Maize]
-    SeasonCheck -- Temp < 22°C --> RabiRec[Rabi Suite: Wheat Primary, Gram, Mustard]
-    SeasonCheck -- Moderate / Transitional --> TransRec[Transitional Suite: Soybean, Gram, Maize]
+    SownCheck -->|"Unsown / Fallow"| SeasonCheck{"Weather & Soil Conditions"}
+    SeasonCheck -->|"Rainfall > 100mm OR Temp > 28°C"| KharifRec["Kharif Suite: Soybean Primary, Paddy, Cotton, Maize"]
+    SeasonCheck -->|"Temp < 22°C"| RabiRec["Rabi Suite: Wheat Primary, Gram, Mustard"]
+    SeasonCheck -->|"Moderate / Transitional"| TransRec["Transitional Suite: Soybean, Gram, Maize"]
     
-    KharifRec --> PrepAdvisory[Deep Summer Ploughing & FYM Dressing]
+    KharifRec --> PrepAdvisory["Deep Summer Ploughing & FYM Dressing"]
     RabiRec --> PrepAdvisory
     TransRec --> PrepAdvisory
 ```
 
 #### Environmental Hazard Rules Engine
 The engine evaluates real-time ambient metrics to trigger automated agronomic warnings:
-- **Excessive Precipitation Warning**: If $\text{Rainfall} > 150\text{ mm} \implies$ *"Excess rainfall detected — ensure field drainage channels are cleared to prevent root hypoxia."*
-- **Extreme Heat Stress Warning**: If $T_{\text{mean}} > 38^\circ\text{C} \implies$ *"Heat stress risk — schedule protective evening sprinkler irrigation to avoid blossom drop."*
-- **Severe Soil Acidity Warning**: If $\text{pH} < 5.5 \implies$ *"Soil pH too acidic — apply agricultural lime (calcium carbonate) at 2–4 t/ha before next sowing cycle."*
-- **Soil Alkalinity Warning**: If $\text{pH} > 8.0 \implies$ *"Alkaline soil detected — apply agricultural gypsum (calcium sulfate) and green manure."*
-- **Nitrogen Starvation Warning**: If $\text{N} < 20\text{ kg/ha} \implies$ *"Severe Nitrogen deficit — top-dress urea at 60 kg/ha split across two applications."*
-- **Phosphorus Starvation Warning**: If $\text{P} < 10\text{ kg/ha} \implies$ *"Phosphorus deficiency detected — apply Single Super Phosphate (SSP) or DAP directly at root zone."*
+- **Excessive Precipitation Warning**: If $\text{Rainfall} \gt 150\text{ mm} \implies$ *"Excess rainfall detected — ensure field drainage channels are cleared to prevent root hypoxia."*
+- **Extreme Heat Stress Warning**: If $T_{\text{mean}} \gt 38^\circ\text{C} \implies$ *"Heat stress risk — schedule protective evening sprinkler irrigation to avoid blossom drop."*
+- **Severe Soil Acidity Warning**: If $\text{pH} \lt 5.5 \implies$ *"Soil pH too acidic — apply agricultural lime (calcium carbonate) at 2–4 t/ha before next sowing cycle."*
+- **Soil Alkalinity Warning**: If $\text{pH} \gt 8.0 \implies$ *"Alkaline soil detected — apply agricultural gypsum (calcium sulfate) and green manure."*
+- **Nitrogen Starvation Warning**: If $\text{N} \lt 20\text{ kg/ha} \implies$ *"Severe Nitrogen deficit — top-dress urea at 60 kg/ha split across two applications."*
+- **Phosphorus Starvation Warning**: If $\text{P} \lt 10\text{ kg/ha} \implies$ *"Phosphorus deficiency detected — apply Single Super Phosphate (SSP) or DAP directly at root zone."*
 
 ---
 
-### 7.7 Data Harvesting & Remote Sensing Pipelines
+### 7.7 Data Harvesting and Remote Sensing Pipelines
 
 #### 1. Copernicus Sentinel-2 Multispectral Ingestion (`ai/collection/satellite/`)
 - Interacts with Copernicus Data Space Ecosystem via STAC (SpatioTemporal Asset Catalog) APIs.
 - Queries Cloudless ($\text{Cloud Cover} < 20\%$) L2A Bottom-Of-Atmosphere (BOA) reflectance tiles over the farm's PostGIS bounding box.
 - Computes pixel-level vegetation indices across a 45-day temporal look-back window:
   - **NDVI (Normalized Difference Vegetation Index)**: Sensitive to chlorophyll absorption:
-    $$\text{NDVI} = \frac{\text{Band 8 (NIR)} - \text{Band 4 (Red)}}{\text{Band 8 (NIR)} + \text{Band 4 (Red)}}$$
+
+    $$
+    \text{NDVI} = \frac{\text{Band 8 (NIR)} - \text{Band 4 (Red)}}{\text{Band 8 (NIR)} + \text{Band 4 (Red)}}
+    $$
+
   - **NDWI (Normalized Difference Water Index)**: Sensitive to surface waterlogging and flood inundation:
-    $$\text{NDWI} = \frac{\text{Band 8 (NIR)} - \text{Band 11 (SWIR-1)}}{\text{Band 8 (NIR)} + \text{Band 11 (SWIR-1)}}$$
+
+    $$
+    \text{NDWI} = \frac{\text{Band 8 (NIR)} - \text{Band 11 (SWIR-1)}}{\text{Band 8 (NIR)} + \text{Band 11 (SWIR-1)}}
+    $$
+
   - **NDMI (Normalized Difference Moisture Index)**: Sensitive to crop canopy moisture stress:
-    $$\text{NDMI} = \frac{\text{Band 8 (NIR)} - \text{Band 12 (SWIR-2)}}{\text{Band 8 (NIR)} + \text{Band 12 (SWIR-2)}}$$
+
+    $$
+    \text{NDMI} = \frac{\text{Band 8 (NIR)} - \text{Band 12 (SWIR-2)}}{\text{Band 8 (NIR)} + \text{Band 12 (SWIR-2)}}
+    $$
 
 #### 2. Agro-Meteorological Harvester (`ai/collection/weather/`)
 - Fetches current weather observations and 5-day / 3-hour forecasts from OpenWeatherMap using the farm's centroid latitude and longitude.
@@ -820,7 +894,7 @@ contract AgriShieldRecords {
 
 ---
 
-## 9. Insurer & Admin Web Portal (`web/`)
+## 9. Insurer and Admin Web Portal (`web/`)
 
 Built with **React 18**, **TypeScript**, and **Vite**, the Web Portal provides insurers and PMFBY administrators with deep monitoring and claim adjudication capabilities.
 
@@ -868,11 +942,11 @@ Built with **Flutter 3** and **Riverpod**, the mobile app adheres strictly to ag
 
 ---
 
-## 11. Two-Way Synchronization & Notification Engine
+## 11. Two-Way Synchronization and Notification Engine
 
 AgriShield implements a closed-loop reactive event architecture between the Flutter mobile app and the React admin portal:
 
-$$\text{Every farmer write updates the admin dashboard} \iff \text{Every admin action creates a farmer notification}$$
+> **Closed-Loop Operational Invariant**: Every farmer write immediately synchronizes with the admin dashboard $\iff$ Every admin decision triggers a farmer push notification.
 
 ```
    ┌───────────────────────┐                    ┌───────────────────────┐
@@ -898,7 +972,7 @@ $$\text{Every farmer write updates the admin dashboard} \iff \text{Every admin a
 
 ---
 
-## 12. Complete REST API Contract & Envelope Specification
+## 12. Complete REST API Contract and Envelope Specification
 
 All API responses follow the standard JSON envelope specified in `openapi.yaml`:
 
@@ -966,7 +1040,7 @@ On validation or business logic error:
 
 ---
 
-## 13. Environment Configuration & Secrets
+## 13. Environment Configuration and Secrets
 
 > [!CAUTION]
 > **Never commit real `.env` files, private keys, or API credentials to Git.**
@@ -1008,7 +1082,7 @@ VITE_DEMO_MODE=false
 
 ---
 
-## 14. Step-by-Step Installation & Local Runbook
+## 14. Step-by-Step Installation and Local Runbook
 
 ### Prerequisites
 - **Python**: 3.10 or 3.11
@@ -1104,7 +1178,7 @@ flutter run
 
 ---
 
-## 15. Testing & Verification Guide
+## 15. Testing and Verification Guide
 
 ### 1. Test Backend & AI Proxy Interoperability
 ```bash
@@ -1131,7 +1205,7 @@ pytest tests/ -v
 
 ---
 
-## 16. PMFBY Compliance & Hackathon Edge
+## 16. PMFBY Compliance and Hackathon Edge
 
 | Hackathon Criterion | AgriShield Delivery |
 |---|---|
@@ -1143,7 +1217,7 @@ pytest tests/ -v
 
 ---
 
-## 📜 License & Acknowledgments
+## 📜 License and Acknowledgments
 
 - **Hackathon**: Developed for the **Smart VIT Hackathon 2026** (Problem Statement `SVH26007`).
 - **Data Attributions**:
