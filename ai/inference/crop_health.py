@@ -1,6 +1,2 @@
-"""Crop health inference."""
-
-def predict_crop_health(image_features):
-    """Predict crop health from image features."""
-    # TODO: Implement crop health prediction
-    pass
+"""Crop health inference — delegates to cv_pipeline.predict_crop_health."""
+from inference.cv_pipeline import predict_crop_health  # noqa: F401
