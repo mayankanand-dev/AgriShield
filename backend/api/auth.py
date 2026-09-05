@@ -84,8 +84,7 @@ async def register_or_login(req: RegisterOrLoginRequest, db: AsyncSession = Depe
         # Create new farmer
         user = User(phone=req.phone, role=UserRole.FARMER)
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        await db.flush()
         is_new_user = True
         
         # Create welcome notification
@@ -98,11 +97,12 @@ async def register_or_login(req: RegisterOrLoginRequest, db: AsyncSession = Depe
         db.add(welcome_notif)
         await db.commit()
         
-    access_token = create_access_token(str(user.id))
+    user_id_str = str(user.id)
+    access_token = create_access_token(user_id_str)
     
     return _ok({
         "user": {
-            "id": str(user.id),
+            "id": user_id_str,
             "phone": user.phone,
             "name": user.name,
             "role": user.role.value
