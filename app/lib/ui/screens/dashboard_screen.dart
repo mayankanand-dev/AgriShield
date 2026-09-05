@@ -24,6 +24,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.initState();
     _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       ref.invalidate(farmsProvider);
+      ref.invalidate(userProvider);
     });
   }
 
@@ -101,32 +102,73 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
       body: farmsAsync.when(
         data: (farms) {
-          return ListView(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 76, // Safe area + appbar + spacing
-              bottom: 100, // Space for bottom nav and fab
-              left: 16,
-              right: 16,
-            ),
-            children: [
-              _buildWelcomeHeader(ref.watch(userProvider)),
-              const SizedBox(height: 24),
-              _buildWeatherBanner(ref.watch(weatherProvider)),
-              const SizedBox(height: 24),
-              const Text(
-                'Your Farms',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AgriShieldTheme.onBackground),
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(farmsProvider);
+              ref.invalidate(userProvider);
+              ref.invalidate(weatherProvider);
+            },
+            color: AgriShieldTheme.primary,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 76, // Safe area + appbar + spacing
+                bottom: 100, // Space for bottom nav and fab
+                left: 16,
+                right: 16,
               ),
-              const SizedBox(height: 16),
-              if (farms.isEmpty)
-                const Center(child: Text('No farms added yet.'))
-              else
-                ...farms.map((farm) => _buildFarmCard(context, farm)),
-            ],
+              children: [
+                _buildWelcomeHeader(ref.watch(userProvider)),
+                const SizedBox(height: 24),
+                _buildWeatherBanner(ref.watch(weatherProvider)),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Your Farms',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onBackground),
+                    ),
+                    Text(
+                      '${farms.length} Registered',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.primary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (farms.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.5)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.landscape_outlined, size: 48, color: AgriShieldTheme.onSurfaceVariant),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'No farms added yet',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Tap the "+" button below to draw your plot boundary on the map and enroll for PMFBY protection.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: AgriShieldTheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  ...farms.map((farm) => _buildFarmCard(context, farm)),
+              ],
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => const Center(child: CircularProgressIndicator(color: AgriShieldTheme.primary)),
+        error: (err, stack) => Center(child: Text('Error loading farms: $err')),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -161,18 +203,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             );
           },
           loading: () => const Text(
-            'Hello 👋',
+            'Hello, Farmer 👋',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
               color: AgriShieldTheme.onBackground,
             ),
           ),
           error: (err, stack) => const Text(
-            'Hello 👋',
+            'Hello, Farmer 👋',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
               color: AgriShieldTheme.onBackground,
             ),
           ),
