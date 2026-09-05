@@ -53,6 +53,7 @@ export type Claim = {
   incident_date: string;
   event_type: string;
   description: string;
+  evidence_ids?: string[];
   status: 'SUBMITTED' | 'AI_ASSESSED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
   damage_pct: number | null;
   ai_confidence: number | null;
@@ -249,6 +250,22 @@ export const api = {
       condition: 'Clear', timestamp: new Date().toISOString()
     });
     const res = await apiClient.get(`/farms/${farmId}/weather/current`);
+    return res.data;
+  },
+
+  getFarmRevenue: async (farmId: string, crop?: string): Promise<Envelope<any>> => {
+    if (IS_DEMO) return createMockResponse({
+      farm_id: farmId, crop: crop || 'Wheat', yield_kg_per_ha: 3200,
+      total_yield_quintals: 76.8, mandi_price_per_quintal: 2425, total_revenue: 186240,
+      market: 'Bhopal Mandi (Benchmark)'
+    });
+    const query = crop ? `?crop=${encodeURIComponent(crop)}` : '';
+    const res = await apiClient.get(`/farms/${farmId}/revenue${query}`);
+    return res.data;
+  },
+
+  updateFarm: async (farmId: string, data: { crop?: string; sowing_date?: string; name?: string }): Promise<Envelope<any>> => {
+    const res = await apiClient.patch(`/farms/${farmId}`, data);
     return res.data;
   },
 

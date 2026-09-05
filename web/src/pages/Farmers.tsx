@@ -1,54 +1,49 @@
-import { Search, MoreVertical, Plus } from 'lucide-react';
+import { Search, MoreVertical } from 'lucide-react';
 import { api } from '../api';
 import { useEffect, useState } from 'react';
-import type { User } from '../api';
+import type { Farmer } from '../api';
 
 export default function Farmers() {
-  const [farmers, setFarmers] = useState<User[]>([]);
+  const [farmers, setFarmers] = useState<Farmer[]>([]);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     api.getFarmers().then(res => setFarmers(res.data));
   }, []);
 
+  const filteredFarmers = farmers.filter(farmer => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (farmer.name && farmer.name.toLowerCase().includes(q)) ||
+      (farmer.phone && farmer.phone.toLowerCase().includes(q)) ||
+      (farmer.id && farmer.id.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="flex-1 flex flex-col min-w-0">
-            <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-6">
+      <div className="p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-6">
         <div className="flex justify-between items-end">
           <div>
             <h2 className="text-3xl font-bold text-on-background">Farmers Directory</h2>
             <p className="text-base text-on-surface-variant mt-1">Manage registered farmers and their policies.</p>
           </div>
-          <button className="bg-primary text-on-primary px-4 py-2 rounded-lg text-sm hover:bg-surface-tint transition-colors shadow-sm flex items-center gap-2">
-            <Plus size={18} />
-            Add New Farmer
-          </button>
         </div>
 
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-end">
-          <div className="flex-1 w-full">
-            <label className="block text-sm font-medium text-on-surface-variant mb-2">Search</label>
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
+          <div className="w-full">
+            <label className="block text-sm font-medium text-on-surface-variant mb-2">Search Farmers</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" size={20} />
-              <input className="w-full pl-10 pr-4 py-2 bg-surface rounded-lg border border-outline-variant focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors text-sm" placeholder="Search by name, ID, or location..." type="text" />
+              <input 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-surface rounded-lg border border-outline-variant focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors text-sm" 
+                placeholder="Search by farmer name, phone number, or ID..." 
+                type="text" 
+              />
             </div>
-          </div>
-          <div className="w-full md:w-48">
-            <label className="block text-sm font-medium text-on-surface-variant mb-2">Region</label>
-            <select className="w-full px-4 py-2 bg-surface rounded-lg border border-outline-variant focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors text-sm">
-              <option>All Regions</option>
-              <option>Midwest</option>
-              <option>Southwest</option>
-              <option>Northwest</option>
-            </select>
-          </div>
-          <div className="w-full md:w-48">
-            <label className="block text-sm font-medium text-on-surface-variant mb-2">Crop Type</label>
-            <select className="w-full px-4 py-2 bg-surface rounded-lg border border-outline-variant focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors text-sm">
-              <option>All Crops</option>
-              <option>Corn</option>
-              <option>Wheat</option>
-              <option>Soybeans</option>
-            </select>
           </div>
         </div>
 
@@ -60,23 +55,21 @@ export default function Farmers() {
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">User ID</th>
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Name</th>
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Phone</th>
-                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Role</th>
+                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Email</th>
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Status</th>
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-on-surface">
-                {farmers.map((farmer) => (
+                {filteredFarmers.map((farmer) => (
                   <tr key={farmer.id} className="border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors">
-                    <td className="px-6 py-4">{farmer.id.substring(0, 8)}...</td>
+                    <td className="px-6 py-4 font-mono text-xs">{farmer.id.substring(0, 8)}...</td>
                     <td className="px-6 py-4 font-semibold">{farmer.name || 'Unknown'}</td>
                     <td className="px-6 py-4">{farmer.phone || 'N/A'}</td>
-                    <td className="px-6 py-4">{farmer.role}</td>
+                    <td className="px-6 py-4 text-xs text-on-surface-variant">{farmer.email || 'N/A'}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        farmer.is_active ? 'bg-primary/10 text-primary' : 'bg-error/10 text-error'
-                      }`}>
-                        {farmer.is_active ? 'ACTIVE' : 'INACTIVE'}
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        REGISTERED
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">

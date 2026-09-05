@@ -2,7 +2,6 @@
     "model": "yield_prediction",
     "version": "yield-v1.0.0",
     "algorithm": "RandomForestRegressor",
-    "target": "yield",
     "features": [
         "crop",
         "area_ha",
@@ -35,5 +34,6 @@
         "excessive_rainfall_index",
         "disease_probability",
         "historical_loss"
-    ]
+    ],
+    "target": "yield"
 }

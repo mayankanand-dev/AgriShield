@@ -13,7 +13,7 @@ from schemas.contract import Envelope, EnvelopeMeta, EnvelopeError, GeoPolygon, 
 from services.polygon_validator import validate_farm_boundary
 from services.ai_client import get_ai_client
 from db.session import get_db
-from db.models import Farm, User, UserRole, PolicyStatus
+from db.models import Farm, User, UserRole, PolicyStatus, SoilReport, SoilReportSource
 from api.auth import get_current_user, get_admin_user, _ok, _error
 
 router = APIRouter()
@@ -164,6 +164,105 @@ async def get_farm(
 
     return _ok(_serialize_farm(farm, include_farmer=(current_user.role == UserRole.ADMIN)))
 
+class UpdateFarmRequest(BaseModel):
+    crop: Optional[str] = None
+    sowing_date: Optional[date] = None
+    name: Optional[str] = None
+
+@router.patch("/{farm_id}")
+async def update_farm(
+    farm_id: str,
+    req: UpdateFarmRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        farm_uuid = uuid.UUID(farm_id)
+    except ValueError:
+        return _error("VALIDATION_ERROR", "Invalid UUID")
+
+    farm = await db.get(Farm, farm_uuid)
+    if not farm:
+        return _error("FARM_NOT_FOUND", "Farm not found", 404)
+
+    if current_user.role != UserRole.ADMIN and farm.user_id != current_user.id:
+        return _error("FORBIDDEN", "Not allowed to edit this farm", 403)
+
+    if req.crop is not None:
+        farm.crop = req.crop
+    if req.sowing_date is not None:
+        farm.sowing_date = datetime.combine(req.sowing_date, datetime.min.time())
+    if req.name is not None:
+        farm.name = req.name
+
+    await db.commit()
+    await db.refresh(farm)
+    return _ok(_serialize_farm(farm))
+
+@router.get("/{farm_id}/revenue")
+async def get_farm_revenue(
+    farm_id: str,
+    crop: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from services.agmarknet_client import get_mandi_price
+    farm = await _get_farm_or_404(farm_id, db, current_user)
+    if not isinstance(farm, Farm):
+        return farm
+
+    area_ha = max((farm.area_m2 or 10000) / 10000.0, 0.01)
+    target_crop = crop or farm.crop or "Wheat"
+    if target_crop.lower() in ("unsown", "none", "fallow", ""):
+        target_crop = "Soybean"
+
+    # 1. Fetch mandi price (data.gov.in / MSP benchmark)
+    mandi = await get_mandi_price(target_crop)
+    price_per_qtl = mandi["price_per_quintal"]
+
+    # 2. Get predicted yield
+    try:
+        ai = get_ai_client()
+        yield_res = await ai.get_yield_prediction(
+            crop=target_crop,
+            area_ha=area_ha,
+            weather={"rainfall": 80, "temp_mean": 27, "humidity": 65},
+            soil={"pH": 6.5, "N": 50, "P": 25, "K": 200, "organic_carbon": 0.5},
+            satellite={"ndvi_mean": 0.5, "ndwi_mean": 0.0, "ndmi_mean": 0.0},
+        )
+        yield_kg_per_ha = float(yield_res.get("yield_value", 3200.0))
+    except Exception:
+        yield_kg_per_ha = 3200.0
+
+    total_yield_kg = round(yield_kg_per_ha * area_ha, 2)
+    total_yield_quintals = round(total_yield_kg / 100.0, 2)
+
+    # 3. Revenue = Yield in Quintals * Mandi Price per Quintal
+    total_revenue = round(total_yield_quintals * price_per_qtl, 2)
+    revenue_per_ha = round(total_revenue / area_ha, 2)
+
+    return _ok({
+        "farm_id": str(farm.id),
+        "farm_name": farm.name,
+        "crop": target_crop,
+        "area_ha": round(area_ha, 2),
+        "area_acres": round(area_ha * 2.47105, 2),
+        "yield_kg_per_ha": yield_kg_per_ha,
+        "total_yield_kg": total_yield_kg,
+        "total_yield_quintals": total_yield_quintals,
+        "mandi_price_per_quintal": price_per_qtl,
+        "mandi_price_per_kg": round(price_per_qtl / 100.0, 2),
+        "market": mandi["market"],
+        "grade": mandi["grade"],
+        "price_date": mandi["date"],
+        "price_source": mandi["source"],
+        "is_live_mandi": mandi["is_live"],
+        "total_revenue": total_revenue,
+        "total_revenue_inr": total_revenue,
+        "revenue_per_ha": revenue_per_ha,
+        "yield_quintals": total_yield_quintals,
+    })
+
 class BoundaryCheckRequest(BaseModel):
     boundary: GeoPolygon
 
@@ -199,9 +298,10 @@ async def farm_crop_health(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    farm = await _get_farm_or_404(farm_id, db, current_user)
-    if not isinstance(farm, Farm):
-        return farm
+    if farm_id not in ("demo", "general", "scan"):
+        farm = await _get_farm_or_404(farm_id, db, current_user)
+        if not isinstance(farm, Farm):
+            return farm
         
     try:
         image_bytes = await image.read()
@@ -224,8 +324,22 @@ async def farm_yield_predict(
         
     try:
         area_ha = (farm.area_m2 or 10000) / 10000.0
-        crop = farm.crop or "wheat"
+        is_unsown = not farm.crop or farm.crop.strip().lower() in ("unsown", "fallow", "none", "")
         
+        ai = get_ai_client()
+        crop_to_predict = farm.crop
+        if is_unsown:
+            try:
+                adv = await ai.get_advisory({
+                    "crop": "unsown",
+                    "area_ha": area_ha,
+                    "weather": {"temp_mean": 28, "rainfall": 80},
+                    "soil": {"N": 50, "P": 25, "K": 200, "pH": 6.5},
+                })
+                crop_to_predict = adv.get("suggested_crop", "Soybean")
+            except Exception:
+                crop_to_predict = "Soybean"
+
         boundary_coords = None
         centroid_lat = None
         centroid_lon = None
@@ -238,9 +352,8 @@ async def farm_yield_predict(
         except Exception:
             pass
 
-        ai = get_ai_client()
         result = await ai.get_yield_prediction(
-            crop=crop, area_ha=area_ha,
+            crop=crop_to_predict, area_ha=area_ha,
             weather={"rainfall": 80, "temp_mean": 27, "humidity": 65},
             soil={"pH": 6.5, "N": 50, "P": 25, "K": 200, "organic_carbon": 0.5},
             satellite={"ndvi_mean": 0.5, "ndwi_mean": 0.0, "ndmi_mean": 0.0},
@@ -248,6 +361,16 @@ async def farm_yield_predict(
             centroid_lat=centroid_lat,
             centroid_lon=centroid_lon,
         )
+        
+        # Calculate total farm yield
+        yield_val = float(result.get("yield_value", 3200.0))
+        result["area_ha"] = round(area_ha, 2)
+        result["total_yield_kg"] = round(yield_val * area_ha, 2)
+        result["total_yield_quintals"] = round(result["total_yield_kg"] / 100.0, 2)
+        result["is_unsown"] = is_unsown
+        if is_unsown:
+            result["suggested_crop"] = crop_to_predict
+
         return _ok(result)
     except Exception as e:
         return _error("AI_UNAVAILABLE", str(e), 500)
@@ -333,6 +456,23 @@ async def farm_soil_analyze(
         file_bytes = await file.read()
         ai = get_ai_client()
         result = await ai.get_soil_ocr(file_bytes, file.filename or "soil_report")
+        
+        try:
+            report = SoilReport(
+                farm_id=farm.id,
+                source=SoilReportSource.OCR_UPLOAD,
+                n=result.get("N", 45.0),
+                p=result.get("P", 22.0),
+                k=result.get("K", 180.0),
+                ph=result.get("pH", 6.5),
+                confidence=result.get("confidence", 0.85),
+                raw_text=result.get("extracted_text", "")
+            )
+            db.add(report)
+            await db.commit()
+        except Exception:
+            pass
+
         return _ok(result)
     except Exception as e:
         return _error("AI_UNAVAILABLE", str(e), 500)

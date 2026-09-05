@@ -70,6 +70,11 @@ class MockAIClient(AIClient):
         }
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class HttpAIClient(AIClient):
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip("/")
@@ -77,32 +82,45 @@ class HttpAIClient(AIClient):
 
     async def get_crop_health(self, image_bytes: bytes, crop: str, growth_stage: str):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 r = await client.post(
-                    f"{self.base_url}/v1/crop-health",
+                    f"{self.base_url}/v1/crop-health/",
                     files={"image": ("image.jpg", image_bytes, "image/jpeg")},
                     data={"crop": crop, "growth_stage": growth_stage},
                 )
                 r.raise_for_status()
                 return r.json()
-        except Exception:
+        except Exception as e:
+            logger.warning("AI get_crop_health failed: %s, using fallback", e)
             return await self._fallback.get_crop_health(image_bytes, crop, growth_stage)
 
     async def get_damage_assessment(self, image_bytes: bytes, crop: str, event_type: str):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 r = await client.post(
-                    f"{self.base_url}/v1/damage-assessment",
+                    f"{self.base_url}/v1/damage-assessment/",
                     files={"images": ("image.jpg", image_bytes, "image/jpeg")},
                     data={"crop": crop, "event_type": event_type},
                 )
                 r.raise_for_status()
                 return r.json()
-        except Exception:
+        except Exception as e:
+            logger.warning("AI get_damage_assessment failed: %s, using fallback", e)
             return await self._fallback.get_damage_assessment(image_bytes, crop, event_type)
 
     async def get_yield_prediction(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None):
         try:
+            if centroid_lat is None or centroid_lon is None:
+                centroid_lat = 23.2599
+                centroid_lon = 77.4126
+            if not boundary_coordinates:
+                boundary_coordinates = [
+                    [centroid_lon - 0.005, centroid_lat - 0.005],
+                    [centroid_lon + 0.005, centroid_lat - 0.005],
+                    [centroid_lon + 0.005, centroid_lat + 0.005],
+                    [centroid_lon - 0.005, centroid_lat + 0.005],
+                    [centroid_lon - 0.005, centroid_lat - 0.005],
+                ]
             payload = {
                 "crop": crop,
                 "area_ha": area_ha,
@@ -134,16 +152,28 @@ class HttpAIClient(AIClient):
                 "centroid_lat": centroid_lat,
                 "centroid_lon": centroid_lon,
             }
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=75.0, follow_redirects=True) as client:
                 r = await client.post(f"{self.base_url}/v1/yield-prediction/", json=payload)
                 r.raise_for_status()
                 return r.json()
-        except Exception:
+        except Exception as e:
+            logger.warning("AI get_yield_prediction failed: %s, using fallback", e)
             return await self._fallback.get_yield_prediction(crop, area_ha, weather, soil, satellite, boundary_coordinates, centroid_lat, centroid_lon)
 
     async def get_risk_score(self, crop: str, area_ha: float, weather: dict, soil: dict, satellite: dict, history: dict, boundary_coordinates: list = None, centroid_lat: float = None, centroid_lon: float = None):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            if centroid_lat is None or centroid_lon is None:
+                centroid_lat = 23.2599
+                centroid_lon = 77.4126
+            if not boundary_coordinates:
+                boundary_coordinates = [
+                    [centroid_lon - 0.005, centroid_lat - 0.005],
+                    [centroid_lon + 0.005, centroid_lat - 0.005],
+                    [centroid_lon + 0.005, centroid_lat + 0.005],
+                    [centroid_lon - 0.005, centroid_lat + 0.005],
+                    [centroid_lon - 0.005, centroid_lat - 0.005],
+                ]
+            async with httpx.AsyncClient(timeout=75.0, follow_redirects=True) as client:
                 r = await client.post(
                     f"{self.base_url}/v1/risk-score/",
                     json={
@@ -160,28 +190,31 @@ class HttpAIClient(AIClient):
                 )
                 r.raise_for_status()
                 return r.json()
-        except Exception:
+        except Exception as e:
+            logger.warning("AI get_risk_score failed: %s, using fallback", e)
             return await self._fallback.get_risk_score(crop, area_ha, weather, soil, satellite, history, boundary_coordinates, centroid_lat, centroid_lon)
 
     async def get_soil_ocr(self, file_bytes: bytes, filename: str):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 r = await client.post(
-                    f"{self.base_url}/v1/soil-ocr",
+                    f"{self.base_url}/v1/soil-ocr/",
                     files={"file": (filename, file_bytes, "application/octet-stream")},
                 )
                 r.raise_for_status()
                 return r.json()
-        except Exception:
+        except Exception as e:
+            logger.warning("AI get_soil_ocr failed: %s, using fallback", e)
             return await self._fallback.get_soil_ocr(file_bytes, filename)
 
     async def get_advisory(self, farm_context: dict):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                r = await client.post(f"{self.base_url}/v1/advisory", json=farm_context)
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                r = await client.post(f"{self.base_url}/v1/advisory/", json=farm_context)
                 r.raise_for_status()
                 return r.json()
-        except Exception:
+        except Exception as e:
+            logger.warning("AI get_advisory failed: %s, using fallback", e)
             return await self._fallback.get_advisory(farm_context)
 
 
