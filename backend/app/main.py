@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 from core.config import settings
 
-from api import auth, farms, weather, satellite, ai, insurance, claims, notifications, admin
+from api import auth, farms, weather, satellite, ai, insurance, claims, notifications, admin, files
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json")
 
@@ -23,6 +23,54 @@ if not os.path.exists(UPLOAD_DIR):
 
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if isinstance(exc.detail, dict) and "success" in exc.detail:
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    
+    import uuid
+    from datetime import datetime
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "data": None,
+            "meta": {
+                "request_id": str(uuid.uuid4()),
+                "timestamp": datetime.utcnow().isoformat()
+            },
+            "error": {
+                "code": "HTTP_ERROR",
+                "message": str(exc.detail),
+                "details": {}
+            }
+        }
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    import uuid
+    from datetime import datetime
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "data": None,
+            "meta": {
+                "request_id": str(uuid.uuid4()),
+                "timestamp": datetime.utcnow().isoformat()
+            },
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Invalid request payload",
+                "details": {"errors": exc.errors()}
+            }
+        }
+    )
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
@@ -84,5 +132,6 @@ api_router.include_router(insurance.router, prefix="/insurance", tags=["insuranc
 api_router.include_router(claims.router, prefix="/claims", tags=["claims"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(files.router, prefix="/files", tags=["files"])
 
 app.mount(settings.API_V1_STR, api_router)

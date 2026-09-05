@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'main_screen.dart';
 import '../../theme.dart';
+import '../../api/api_client.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -15,7 +17,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final List<TextEditingController> _otpControllers = List.generate(6, (index) => TextEditingController());
   final List<FocusNode> _otpFocusNodes = List.generate(6, (index) => FocusNode());
   bool _otpSent = false;
+  bool _isLoading = false;
   String _phoneNumber = '';
+  final _storage = const FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -39,12 +43,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  void _verifyOtp() {
+  Future<void> _verifyOtp() async {
     String otp = _otpControllers.map((c) => c.text).join();
     if (otp.length == 6) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainScreen()),
+      setState(() => _isLoading = true);
+      
+      final client = ApiClient();
+      final response = await client.post<Map<String, dynamic>>(
+        '/auth/register-or-login',
+        {'phone': _phoneNumber},
+        (json) => json as Map<String, dynamic>
       );
+      
+      setState(() => _isLoading = false);
+
+      if (response.success && response.data != null) {
+        final token = response.data!['access_token'];
+        if (token != null) {
+          await _storage.write(key: 'access_token', value: token);
+        }
+        
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login failed: ${response.error?.message ?? "Unknown error"}'))
+          );
+        }
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid 6-digit OTP.')));
     }
@@ -249,13 +279,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 32),
         ElevatedButton(
-          onPressed: _verifyOtp,
+          onPressed: _isLoading ? null : _verifyOtp,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Text('Verify & Login'),
-              SizedBox(width: 8),
-              Icon(Icons.check_circle),
+            children: [
+              if (_isLoading)
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              else ...[
+                const Text('Verify & Login'),
+                const SizedBox(width: 8),
+                const Icon(Icons.check_circle),
+              ]
             ],
           ),
         ),

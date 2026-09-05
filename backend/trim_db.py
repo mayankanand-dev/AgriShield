@@ -1,8 +1,9 @@
-import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import text
+import os
+from dotenv import load_dotenv
+from core.config import settings
 
-DATABASE_URL = "postgresql+asyncpg://postgres.lkwhqaiqzdutsxgeggko:AgriShield%40svh1@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL") or settings.DATABASE_URL
 
 async def main():
     engine = create_async_engine(DATABASE_URL, echo=True)

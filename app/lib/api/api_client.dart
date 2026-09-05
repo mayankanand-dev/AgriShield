@@ -8,7 +8,7 @@ class ApiClient {
   final String baseUrl;
   final _storage = const FlutterSecureStorage();
 
-  ApiClient({this.baseUrl = "http://172.25.232.27:8000/api/v1"});
+  ApiClient({this.baseUrl = "http://10.0.2.2:8000/api/v1"});
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _storage.read(key: 'access_token');
@@ -41,6 +41,44 @@ class ApiClient {
         headers: headers,
         body: jsonEncode(body),
       );
+      return _processResponse(response, fromJsonData);
+    } catch (e) {
+      return Envelope(success: false, error: EnvelopeError(code: 'NETWORK_ERROR', message: e.toString()));
+    }
+  }
+
+  Future<Envelope<T>> patch<T>(String endpoint, Map<String, dynamic> body, T Function(dynamic) fromJsonData, {Map<String, String>? extraHeaders}) async {
+    try {
+      final headers = await _getHeaders();
+      if (extraHeaders != null) {
+        headers.addAll(extraHeaders);
+      }
+      final response = await http.patch(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+      return _processResponse(response, fromJsonData);
+    } catch (e) {
+      return Envelope(success: false, error: EnvelopeError(code: 'NETWORK_ERROR', message: e.toString()));
+    }
+  }
+
+  Future<Envelope<T>> uploadFile<T>(String endpoint, String filePath, T Function(dynamic) fromJsonData, {Map<String, String>? fields}) async {
+    try {
+      final headers = await _getHeaders();
+      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl$endpoint'));
+      request.headers.addAll(headers);
+      
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+      
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      
       return _processResponse(response, fromJsonData);
     } catch (e) {
       return Envelope(success: false, error: EnvelopeError(code: 'NETWORK_ERROR', message: e.toString()));

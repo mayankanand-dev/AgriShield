@@ -1,6 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../theme.dart';
+import '../../api/api_client.dart';
 
 class CropPhotoScanScreen extends StatefulWidget {
   const CropPhotoScanScreen({super.key});
@@ -11,7 +14,10 @@ class CropPhotoScanScreen extends StatefulWidget {
 
 class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTickerProviderStateMixin {
   bool _showResults = false;
+  bool _isUploading = false;
+  File? _imageFile;
   late AnimationController _scanController;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -25,23 +31,57 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
     super.dispose();
   }
 
-  void _captureImage() {
-    // Flash effect
-    showGeneralDialog(
+  Future<void> _captureImage() async {
+    final source = await showDialog<ImageSource>(
       context: context,
-      barrierColor: Colors.white,
-      transitionDuration: const Duration(milliseconds: 100),
-      pageBuilder: (context, animation, secondaryAnimation) => const SizedBox.shrink(),
-    ).then((_) {
-      setState(() {
+      builder: (context) => AlertDialog(
+        title: const Text('Select Photo Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final XFile? image = await _picker.pickImage(source: source);
+    if (image == null) return;
+    
+    setState(() {
+      _imageFile = File(image.path);
+      _isUploading = true;
+    });
+
+    final apiClient = ApiClient();
+    final uploadRes = await apiClient.uploadFile<Map<String, dynamic>>(
+      '/files', 
+      _imageFile!.path, 
+      (json) => json as Map<String, dynamic>
+    );
+    
+    setState(() {
+      _isUploading = false;
+      if (uploadRes.success) {
         _showResults = true;
-      });
-      _showResultsBottomSheet();
+        _showResultsBottomSheet();
+      }
     });
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (!mounted) return;
-      Navigator.of(context).pop();
-    });
+    
+    if (!uploadRes.success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload image: ${uploadRes.error?.message}')));
+    }
   }
 
   void _showResultsBottomSheet() {
@@ -53,6 +93,7 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
     ).whenComplete(() {
       setState(() {
         _showResults = false;
+        _imageFile = null;
       });
     });
   }
@@ -109,7 +150,7 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
                   decoration: BoxDecoration(
                     color: AgriShieldTheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(16),
-                    image: const DecorationImage(image: NetworkImage('https://picsum.photos/100'), fit: BoxFit.cover),
+                    image: _imageFile != null ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover) : null,
                   ),
                 ),
               ],
@@ -185,7 +226,7 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
               backgroundColor: AgriShieldTheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
-              title: const Text('Farm Details', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
+              title: const Text('AI Scanner', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
             ),
           ),
         ),
@@ -202,8 +243,15 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
                 children: [
                   Container(
                     color: AgriShieldTheme.surfaceVariant,
-                    child: const Image(image: NetworkImage('https://picsum.photos/400/600'), fit: BoxFit.cover),
+                    child: _imageFile != null
+                        ? Image.file(_imageFile!, fit: BoxFit.cover)
+                        : const Center(child: Icon(Icons.camera, size: 64, color: Colors.grey)),
                   ),
+                  if (_isUploading)
+                     Container(
+                       color: Colors.black54,
+                       child: const Center(child: CircularProgressIndicator()),
+                     ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black45, Colors.transparent, Colors.black45]),
@@ -279,26 +327,14 @@ class _CropPhotoScanScreenState extends State<CropPhotoScanScreen> with SingleTi
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant, borderRadius: BorderRadius.circular(20)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: AgriShieldTheme.surface, borderRadius: BorderRadius.circular(16)), child: const Text('1x', style: TextStyle(fontWeight: FontWeight.bold))),
-                        const SizedBox(width: 8),
-                        const Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4), child: Text('2x', style: TextStyle(fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurfaceVariant))),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   GestureDetector(
-                    onTap: _captureImage,
+                    onTap: _isUploading ? null : _captureImage,
                     child: Container(
                       width: 80, height: 80,
                       decoration: BoxDecoration(color: AgriShieldTheme.surfaceVariant, shape: BoxShape.circle, border: Border.all(color: AgriShieldTheme.surface, width: 4)),
                       child: Center(
-                        child: Container(width: 64, height: 64, decoration: const BoxDecoration(color: AgriShieldTheme.primary, shape: BoxShape.circle), child: const Icon(Icons.camera_alt, color: Colors.white, size: 32)),
+                        child: Container(width: 64, height: 64, decoration: BoxDecoration(color: _isUploading ? Colors.grey : AgriShieldTheme.primary, shape: BoxShape.circle), child: const Icon(Icons.camera_alt, color: Colors.white, size: 32)),
                       ),
                     ),
                   ),

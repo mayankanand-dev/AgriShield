@@ -16,8 +16,7 @@ export default function Login() {
       const form = e.target as HTMLFormElement;
       const email = (form.elements[0] as HTMLInputElement).value;
       const password = (form.elements[1] as HTMLInputElement).value;
-      
-      const res = await api.login({ identifier: email, password });
+      const res = await api.login({ email, password });
       
       // Store token
       if (res && res.data && res.data.access_token) {
@@ -70,7 +69,7 @@ export default function Login() {
             <input 
               required 
               type="password" 
-              defaultValue="password123"
+              defaultValue="admin123"
               className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
             />
           </div>

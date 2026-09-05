@@ -28,10 +28,10 @@ def validate_farm_boundary(geo_polygon: GeoPolygon) -> PolygonValidationResult:
     poly_m2 = transform(project, poly)
     area = poly_m2.area
     
-    # Sensible defaults for area: 100 sqm to 1,000,000 sqm (100 Ha)
+    # Sensible defaults for area: 100 sqm to 100,000,000 sqm (10,000 Ha) for hackathon demo
     if area < 100:
         return PolygonValidationResult(valid=False, reason=PolygonValidationResultReason.AREA_TOO_SMALL, area_m2=area)
-    if area > 1_000_000:
+    if area > 100_000_000:
         return PolygonValidationResult(valid=False, reason=PolygonValidationResultReason.AREA_TOO_LARGE, area_m2=area)
         
     return PolygonValidationResult(valid=True, reason=None, area_m2=area)

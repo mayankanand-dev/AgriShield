@@ -1,18 +1,25 @@
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import '../../providers.dart';
+import '../../api/api_client.dart';
 import 'package:latlong2/latlong.dart';
 import '../../theme.dart';
 
-class AddFarmScreen extends StatefulWidget {
+class AddFarmScreen extends ConsumerStatefulWidget {
   const AddFarmScreen({super.key});
 
   @override
-  State<AddFarmScreen> createState() => _AddFarmScreenState();
+  ConsumerState<AddFarmScreen> createState() => _AddFarmScreenState();
 }
 
-class _AddFarmScreenState extends State<AddFarmScreen> {
+class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
   final List<LatLng> _polygonPoints = [];
+  final ApiClient _apiClient = ApiClient();
+  bool _isSaving = false;
   
   @override
   Widget build(BuildContext context) {
@@ -171,7 +178,7 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: (_polygonPoints.length * 0.5).toStringAsFixed(1),
+                                  text: _calculateArea(_polygonPoints).toStringAsFixed(2),
                                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary, fontFamily: 'Inter'),
                                 ),
                                 const TextSpan(
@@ -204,23 +211,55 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _polygonPoints.length >= 3 ? () {
+                    onPressed: _polygonPoints.length >= 3 && !_isSaving ? () async {
                       if (_hasSelfIntersection(_polygonPoints)) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Invalid boundary: Polygon self-intersects')),
                         );
                         return;
                       }
-                      double mockAreaHectares = _polygonPoints.length * 0.5;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Farm boundary saved! Area: ${mockAreaHectares.toStringAsFixed(1)} ha')),
+                      
+                      setState(() => _isSaving = true);
+                      double areaHectares = _calculateArea(_polygonPoints);
+                      
+                      final response = await _apiClient.post<Map<String, dynamic>>(
+                        '/farms',
+                        {
+                          "name": "New Farm",
+                          "crop": "Unknown",
+                          "area_m2": areaHectares * 10000,
+                          "boundary": {
+                            "type": "Polygon",
+                            "coordinates": [
+                              // Close the loop
+                              [..._polygonPoints.map((p) => [p.longitude, p.latitude]), [_polygonPoints.first.longitude, _polygonPoints.first.latitude]]
+                            ]
+                          }
+                        },
+                        (json) => json as Map<String, dynamic>,
                       );
-                      if (Navigator.canPop(context)) {
-                        Navigator.of(context).pop();
-                      } else {
-                        setState(() {
-                          _polygonPoints.clear();
-                        });
+
+                      if (mounted) {
+                        setState(() => _isSaving = false);
+                        if (response.success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Farm boundary saved! Area: ${areaHectares.toStringAsFixed(2)} ha')),
+                          );
+                          // Clear points
+                          setState(() {
+                            _polygonPoints.clear();
+                          });
+                          // Navigate to Home tab
+                          ref.read(bottomNavIndexProvider.notifier).state = 0;
+                          // If it was pushed (not tab), pop it
+                          if (Navigator.canPop(context)) {
+                            Navigator.of(context).pop();
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to save farm: ${response.error?.message}')),
+                          );
+                        }
                       }
                     } : null,
                     style: ElevatedButton.styleFrom(
@@ -228,10 +267,14 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.check_circle),
-                        SizedBox(width: 8),
-                        Text('Save Boundary'),
+                      children: [
+                        if (_isSaving)
+                          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        else ...[
+                          const Icon(Icons.check_circle),
+                          const SizedBox(width: 8),
+                          const Text('Save Boundary'),
+                        ]
                       ],
                     ),
                   )
@@ -242,6 +285,34 @@ class _AddFarmScreenState extends State<AddFarmScreen> {
         ],
       ),
     );
+  }
+
+  double _calculateArea(List<LatLng> points) {
+    if (points.length < 3) return 0.0;
+    const double radius = 6378137.0; // Earth radius in meters
+    double latSum = 0;
+    for (var p in points) {
+      latSum += p.latitude;
+    }
+    double latMean = (latSum / points.length) * math.pi / 180.0;
+    double cosLatMean = math.cos(latMean);
+
+    List<math.Point<double>> projected = [];
+    for (var p in points) {
+      double x = p.longitude * math.pi / 180.0 * radius * cosLatMean;
+      double y = p.latitude * math.pi / 180.0 * radius;
+      projected.add(math.Point(x, y));
+    }
+
+    double area = 0.0;
+    for (int i = 0; i < projected.length; i++) {
+      int j = (i + 1) % projected.length;
+      area += projected[i].x * projected[j].y;
+      area -= projected[j].x * projected[i].y;
+    }
+    
+    // Area in square meters -> divide by 10000 for Hectares
+    return (area.abs() / 2.0) / 10000.0;
   }
 
   bool _hasSelfIntersection(List<LatLng> points) {

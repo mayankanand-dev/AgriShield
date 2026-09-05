@@ -1,69 +1,87 @@
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from db.session import get_db
-from db.models import User, Farm, InsurancePolicy
+from db.models import User, UserRole, Farm, InsurancePolicy, Notification, NotificationType
 from schemas.insurance import QuoteRequest, PolicyCreate
-from schemas.contract import Envelope, EnvelopeMeta, EnvelopeError
 from services.pricing_service import calculate_premium
 from services.blockchain_service import generate_tamper_proof_hash, record_hash_on_chain
-from api.auth import get_current_user
+from api.auth import get_current_user, _ok, _error
 
 router = APIRouter()
 
-@router.post("/quote", response_model=Envelope)
-async def get_quote(request: QuoteRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Farm).filter(Farm.id == request.farm_id))
-    farm = result.scalar_one_or_none()
+def _serialize_policy(p: InsurancePolicy, include_farmer: bool = False):
+    data = {
+        "id": str(p.id),
+        "user_id": str(p.user_id),
+        "farm_id": str(p.farm_id),
+        "premium_amount": p.premium,
+        "coverage_amount": p.sum_insured,
+        "canonical_hash": p.canonical_hash,
+        "tx_hash": p.tx_hash,
+        "status": p.status.value if p.status else "ACTIVE",
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "start_date": p.created_at.isoformat() if p.created_at else None,
+        "end_date": (p.created_at.replace(year=p.created_at.year + 1)).isoformat() if p.created_at else None
+    }
+    if include_farmer and p.user:
+        data["farmer"] = {
+            "id": str(p.user.id),
+            "name": p.user.name,
+            "phone": p.user.phone
+        }
+    return data
+
+
+@router.post("/quote")
+async def get_quote(
+    request: QuoteRequest, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        farm_uuid = uuid.UUID(request.farm_id)
+    except ValueError:
+        return _error("VALIDATION_ERROR", "Invalid Farm UUID")
+        
+    farm = await db.get(Farm, farm_uuid)
     
     if not farm:
-        return Envelope(
-            success=False, data=None, 
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="FARM_NOT_FOUND", message="Farm not found", details={})
-        )
+        return _error("FARM_NOT_FOUND", "Farm not found")
+        
+    if current_user.role != UserRole.ADMIN and farm.user_id != current_user.id:
+        return _error("FORBIDDEN", "Not allowed to quote this farm", 403)
     
     pricing = calculate_premium(area_m2=request.area_m2, crop=request.crop)
-    
-    return Envelope(
-        success=True,
-        data=pricing,
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
+    return _ok(pricing)
 
-@router.get("/policies", response_model=Envelope)
-async def list_policies(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    result = await db.execute(select(InsurancePolicy))
+
+@router.get("/policies")
+async def list_policies(
+    page: int = 1,
+    page_size: int = 50,
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    offset = (page - 1) * page_size
+    query = select(InsurancePolicy).options(selectinload(InsurancePolicy.user)).order_by(InsurancePolicy.created_at.desc(), InsurancePolicy.id)
+    
+    if current_user.role != UserRole.ADMIN:
+        query = query.where(InsurancePolicy.user_id == current_user.id)
+        
+    query = query.limit(page_size).offset(offset)
+    result = await db.execute(query)
     policies = result.scalars().all()
     
-    data = []
-    for p in policies:
-        data.append({
-            "id": str(p.id),
-            "user_id": str(p.user_id),
-            "farm_id": str(p.farm_id),
-            "premium_amount": p.premium_amount,
-            "coverage_amount": p.coverage_amount,
-            "canonical_hash": p.canonical_hash,
-            "tx_hash": p.tx_hash,
-            "status": p.status.value if p.status else "ACTIVE",
-            "created_at": p.created_at.isoformat() if p.created_at else None,
-            "start_date": p.created_at.isoformat() if p.created_at else None,
-            "end_date": (p.created_at.replace(year=p.created_at.year + 1)).isoformat() if p.created_at else None
-        })
-        
-    return Envelope(
-        success=True,
-        data=data,
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
+    is_admin = current_user.role == UserRole.ADMIN
+    return _ok([_serialize_policy(p, include_farmer=is_admin) for p in policies])
 
-@router.post("/policies", response_model=Envelope, status_code=201)
+
+@router.post("/policies", status_code=201)
 async def create_policy(
     policy_in: PolicyCreate, 
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
@@ -71,26 +89,22 @@ async def create_policy(
     current_user: User = Depends(get_current_user)
 ):
     if not idempotency_key:
-        return Envelope(
-            success=False, data=None, 
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="VALIDATION_ERROR", message="Idempotency-Key header is required", details={})
-        )
+        return _error("VALIDATION_ERROR", "Idempotency-Key header is required")
 
-    result = await db.execute(select(Farm).filter(Farm.id == policy_in.farm_id, Farm.user_id == current_user.id))
-    farm = result.scalar_one_or_none()
-    if not farm:
-        return Envelope(
-            success=False, data=None, 
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="FARM_NOT_FOUND", message="Farm not found or not owned by user", details={})
-        )
+    try:
+        farm_uuid = uuid.UUID(policy_in.farm_id)
+    except ValueError:
+        return _error("VALIDATION_ERROR", "Invalid Farm UUID")
+        
+    farm = await db.get(Farm, farm_uuid)
+    if not farm or (current_user.role != UserRole.ADMIN and farm.user_id != current_user.id):
+        return _error("FARM_NOT_FOUND", "Farm not found or not owned by user")
     
     policy = InsurancePolicy(
         user_id=current_user.id,
         farm_id=farm.id,
-        premium_amount=policy_in.premium_amount,
-        coverage_amount=policy_in.coverage_amount
+        premium=policy_in.premium_amount,
+        sum_insured=policy_in.coverage_amount
     )
     
     db.add(policy)
@@ -101,106 +115,70 @@ async def create_policy(
         "policy_id": str(policy.id),
         "user_id": str(policy.user_id),
         "farm_id": str(policy.farm_id),
-        "premium": policy.premium_amount,
-        "coverage": policy.coverage_amount
+        "premium": policy.premium,
+        "coverage": policy.sum_insured
     }
     canonical_hash = generate_tamper_proof_hash(payload)
     
     policy.canonical_hash = canonical_hash
     policy.tx_hash = await record_hash_on_chain(canonical_hash)
     
+    # Notify farmer of successful policy creation
+    notif = Notification(
+        user_id=policy.user_id,
+        type=NotificationType.POLICY_STATUS,
+        ref_id=policy.id,
+        message=f"Insurance policy created successfully! Transaction on Polygon Amoy: {policy.tx_hash}"
+    )
+    db.add(notif)
+    
     await db.commit()
     await db.refresh(policy)
     
-    data = {
-        "id": str(policy.id),
-        "user_id": str(policy.user_id),
-        "farm_id": str(policy.farm_id),
-        "premium_amount": policy.premium_amount,
-        "coverage_amount": policy.coverage_amount,
-        "canonical_hash": policy.canonical_hash,
-        "tx_hash": policy.tx_hash,
-        "status": policy.status.value,
-        "created_at": policy.created_at.isoformat() if policy.created_at else None
-    }
-    
-    return Envelope(
-        success=True,
-        data=data,
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
+    return _ok(_serialize_policy(policy))
 
-@router.get("/policies/{id}", response_model=Envelope)
-async def get_policy(id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+
+@router.get("/policies/{id}")
+async def get_policy(
+    id: str, 
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     try:
         policy_uuid = uuid.UUID(id)
     except ValueError:
-        return Envelope(
-            success=False, data=None, 
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid UUID", details={})
-        )
+        return _error("VALIDATION_ERROR", "Invalid UUID")
         
-    result = await db.execute(select(InsurancePolicy).filter(InsurancePolicy.id == policy_uuid))
-    policy = result.scalar_one_or_none()
+    policy = await db.get(InsurancePolicy, policy_uuid)
     
     if not policy:
-        return Envelope(
-            success=False, data=None, 
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="POLICY_NOT_FOUND", message="Policy not found", details={})
-        )
+        return _error("POLICY_NOT_FOUND", "Policy not found", 404)
         
-    data = {
-        "id": str(policy.id),
-        "user_id": str(policy.user_id),
-        "farm_id": str(policy.farm_id),
-        "premium_amount": policy.premium_amount,
-        "coverage_amount": policy.coverage_amount,
-        "canonical_hash": policy.canonical_hash,
-        "tx_hash": policy.tx_hash,
-        "status": policy.status.value if policy.status else "ACTIVE",
-        "created_at": policy.created_at.isoformat() if policy.created_at else None
-    }
-    
-    return Envelope(
-        success=True,
-        data=data,
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
+    if current_user.role != UserRole.ADMIN and policy.user_id != current_user.id:
+        return _error("FORBIDDEN", "Not allowed to view this policy", 403)
+        
+    is_admin = current_user.role == UserRole.ADMIN
+    return _ok(_serialize_policy(policy, include_farmer=is_admin))
 
-@router.get("/policies/{id}/verification", response_model=Envelope)
-async def verify_policy(id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+
+@router.get("/policies/{id}/verification")
+async def verify_policy(
+    id: str, 
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     try:
         policy_uuid = uuid.UUID(id)
     except ValueError:
-        return Envelope(
-            success=False, data=None, 
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="VALIDATION_ERROR", message="Invalid UUID", details={})
-        )
+        return _error("VALIDATION_ERROR", "Invalid UUID")
         
-    result = await db.execute(select(InsurancePolicy).filter(InsurancePolicy.id == policy_uuid))
-    policy = result.scalar_one_or_none()
+    policy = await db.get(InsurancePolicy, policy_uuid)
     
     if not policy:
-        return Envelope(
-            success=False, data=None, 
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="POLICY_NOT_FOUND", message="Policy not found", details={})
-        )
+        return _error("POLICY_NOT_FOUND", "Policy not found", 404)
     
-    data = {
+    return _ok({
         "canonical_hash": policy.canonical_hash,
         "tx_hash": policy.tx_hash,
         "status": "VERIFIED" if policy.tx_hash else "PENDING"
-    }
-    
-    return Envelope(
-        success=True,
-        data=data,
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
+    })

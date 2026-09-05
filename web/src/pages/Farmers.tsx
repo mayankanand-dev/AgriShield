@@ -1,13 +1,13 @@
 import { Search, MoreVertical, Plus } from 'lucide-react';
 import { api } from '../api';
 import { useEffect, useState } from 'react';
-import type { Farm } from '../api';
+import type { User } from '../api';
 
 export default function Farmers() {
-  const [farms, setFarms] = useState<Farm[]>([]);
+  const [farmers, setFarmers] = useState<User[]>([]);
 
   useEffect(() => {
-    api.getFarms().then(res => setFarms(res.data));
+    api.getFarmers().then(res => setFarmers(res.data));
   }, []);
 
   return (
@@ -57,28 +57,26 @@ export default function Farmers() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface border-b border-outline-variant">
-                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Farm ID</th>
+                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">User ID</th>
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Name</th>
-                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Crop</th>
-                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Area (m²)</th>
+                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Phone</th>
+                  <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Role</th>
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0">Status</th>
                   <th className="px-6 py-3 text-xs font-medium text-on-surface-variant uppercase tracking-wider sticky top-0 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-on-surface">
-                {farms.map((farm) => (
-                  <tr key={farm.id} className="border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors">
-                    <td className="px-6 py-4">{farm.id}</td>
-                    <td className="px-6 py-4 font-semibold">{farm.name}</td>
-                    <td className="px-6 py-4">{farm.crop || 'N/A'}</td>
-                    <td className="px-6 py-4">{farm.area_m2.toLocaleString()}</td>
+                {farmers.map((farmer) => (
+                  <tr key={farmer.id} className="border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors">
+                    <td className="px-6 py-4">{farmer.id.substring(0, 8)}...</td>
+                    <td className="px-6 py-4 font-semibold">{farmer.name || 'Unknown'}</td>
+                    <td className="px-6 py-4">{farmer.phone || 'N/A'}</td>
+                    <td className="px-6 py-4">{farmer.role}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        farm.status === 'VERIFIED' ? 'bg-primary/10 text-primary' : 
-                        farm.status === 'PENDING' ? 'bg-secondary-container/10 text-secondary-container' : 
-                        'bg-error/10 text-error'
+                        farmer.is_active ? 'bg-primary/10 text-primary' : 'bg-error/10 text-error'
                       }`}>
-                        {farm.status}
+                        {farmer.is_active ? 'ACTIVE' : 'INACTIVE'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -88,10 +86,10 @@ export default function Farmers() {
                     </td>
                   </tr>
                 ))}
-                {farms.length === 0 && (
+                {farmers.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-on-surface-variant">
-                      No farms loaded. (Check Demo Mode)
+                      No farmers registered yet.
                     </td>
                   </tr>
                 )}
@@ -99,7 +97,7 @@ export default function Farmers() {
             </table>
           </div>
           <div className="bg-surface border-t border-outline-variant px-6 py-3 flex items-center justify-between">
-            <span className="text-xs text-on-surface-variant">Showing {farms.length} entries</span>
+            <span className="text-xs text-on-surface-variant">Showing {farmers.length} entries</span>
             <div className="flex gap-2">
               <button className="px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors text-xs disabled:opacity-50" disabled>Prev</button>
               <button className="px-3 py-1 rounded border border-primary-container bg-primary-container text-on-primary text-xs">1</button>

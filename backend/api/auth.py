@@ -1,87 +1,157 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Header
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from schemas.contract import Envelope, EnvelopeMeta, EnvelopeError
+
 from db.session import get_db
-from db.models import User
+from db.models import User, UserRole
+from core.security import create_access_token, verify_password
+from core.config import settings
 
 router = APIRouter()
 
-async def get_current_user(db: AsyncSession = Depends(get_db)) -> User:
-    result = await db.execute(select(User).limit(1))
-    user = result.scalar_one_or_none()
+# --- Schema Definitions ---
+
+class RegisterOrLoginRequest(BaseModel):
+    phone: str
+
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class UpdateProfileRequest(BaseModel):
+    name: str
+
+# Helper to generate consistent envelopes
+def _ok(data: dict):
+    return {
+        "success": True,
+        "data": data,
+        "meta": {"request_id": str(uuid.uuid4()), "timestamp": datetime.utcnow().isoformat()},
+        "error": None
+    }
+
+def _error(code: str, message: str, status_code: int = 400):
+    raise HTTPException(status_code=status_code, detail={
+        "success": False,
+        "data": None,
+        "meta": {"request_id": str(uuid.uuid4()), "timestamp": datetime.utcnow().isoformat()},
+        "error": {"code": code, "message": message}
+    })
+
+async def get_current_user(authorization: str = Header(None), db: AsyncSession = Depends(get_db)) -> User:
+    if not authorization or not authorization.startswith("Bearer "):
+        _error("AUTH_REQUIRED", "Missing or invalid Authorization header", 401)
+    
+    token = authorization.split(" ")[1]
+    from core.security import decode_access_token
+    try:
+        user_id_str = decode_access_token(token)
+    except:
+        _error("AUTH_REQUIRED", "Invalid token", 401)
+        
+    try:
+        uid = uuid.UUID(user_id_str)
+    except:
+        _error("AUTH_REQUIRED", "Invalid user ID in token", 401)
+
+    user = await db.get(User, uid)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
+        _error("AUTH_REQUIRED", "User not found", 401)
+        
     return user
 
-class RegisterRequest(BaseModel):
-    name: str
-    language: str
-    phone: str = ""
-    email: str = ""
+async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.ADMIN:
+        _error("FORBIDDEN", "Admin access required", 403)
+    return current_user
 
-@router.post("/register", response_model=Envelope)
-async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    # Create the user in the database
-    new_user = User(
-        name=req.name,
-        language=req.language,
-        phone=req.phone if req.phone else None,
-        email=req.email if req.email else None,
-        hashed_password="dummy_hash" # Real auth would hash a real password
-    )
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
-    
-    return Envelope(
-        success=True,
-        data={"user": {"id": str(new_user.id), "name": new_user.name, "language": new_user.language}, "access_token": "dummy_token"},
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
 
-@router.post("/login", response_model=Envelope)
-async def login():
-    return Envelope(
-        success=True,
-        data={"access_token": "dummy_token", "refresh_token": "dummy_refresh"},
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
+# --- Endpoints ---
 
-@router.post("/refresh", response_model=Envelope)
-async def refresh():
-    return Envelope(
-        success=True,
-        data={"access_token": "dummy_token_new"},
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
-
-@router.get("/me", response_model=Envelope)
-async def me(db: AsyncSession = Depends(get_db)):
-    # For now, just return the first user we can find to act as the current user
-    result = await db.execute(select(User).limit(1))
+@router.post("/register-or-login")
+async def register_or_login(req: RegisterOrLoginRequest, db: AsyncSession = Depends(get_db)):
+    if not req.phone:
+        _error("VALIDATION_ERROR", "Phone number is required")
+        
+    result = await db.execute(select(User).where(User.phone == req.phone))
     user = result.scalar_one_or_none()
     
+    is_new_user = False
     if not user:
-        return Envelope(
-            success=False,
-            data=None,
-            meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-            error=EnvelopeError(code="AUTH_REQUIRED", message="No active user session")
-        )
+        # Create new farmer
+        user = User(phone=req.phone, role=UserRole.FARMER)
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        is_new_user = True
         
-    return Envelope(
-        success=True,
-        data={"user_id": str(user.id), "name": user.name, "roles": ["FARMER"]},
-        meta=EnvelopeMeta(request_id=uuid.uuid4(), timestamp=datetime.utcnow()),
-        error=None
-    )
+        # Create welcome notification
+        from db.models import Notification, NotificationType
+        welcome_notif = Notification(
+            user_id=user.id,
+            type=NotificationType.POLICY_STATUS, # Reusing this type for now
+            message="Welcome to AgriShield! Please add your farm to get started."
+        )
+        db.add(welcome_notif)
+        await db.commit()
+        
+    access_token = create_access_token(str(user.id))
+    
+    return _ok({
+        "user": {
+            "id": str(user.id),
+            "phone": user.phone,
+            "name": user.name,
+            "role": user.role.value
+        },
+        "access_token": access_token,
+        "is_new_user": is_new_user
+    })
+
+
+@router.post("/login")
+async def admin_login(req: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == req.email))
+    user = result.scalar_one_or_none()
+    
+    if not user or not user.hashed_password:
+        _error("AUTH_FAILED", "Invalid email or password", 401)
+        
+    if not verify_password(req.password, user.hashed_password):
+        _error("AUTH_FAILED", "Invalid email or password", 401)
+        
+    access_token = create_access_token(str(user.id))
+    return _ok({
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "name": user.name,
+            "role": user.role.value
+        },
+        "access_token": access_token
+    })
+
+
+@router.get("/me")
+async def get_me(current_user: User = Depends(get_current_user)):
+    return _ok({
+        "id": str(current_user.id),
+        "phone": current_user.phone,
+        "email": current_user.email,
+        "name": current_user.name,
+        "role": current_user.role.value
+    })
+
+
+@router.patch("/me")
+async def update_me(req: UpdateProfileRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    current_user.name = req.name
+    await db.commit()
+    await db.refresh(current_user)
+    return _ok({
+        "id": str(current_user.id),
+        "name": current_user.name
+    })

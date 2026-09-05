@@ -6,11 +6,34 @@ import '../../theme.dart';
 import 'farm_detail_screen.dart';
 import 'add_farm_screen.dart';
 
-class DashboardScreen extends ConsumerWidget {
+import 'dart:async';
+
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  Timer? _pollingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      ref.invalidate(farmsProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final farmsAsync = ref.watch(farmsProvider);
 
     return Scaffold(
@@ -50,10 +73,16 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AgriShieldTheme.primaryContainer,
-                    child: const Icon(Icons.person, size: 20, color: Colors.white),
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(bottomNavIndexProvider.notifier).state = 4; // Navigate to Profile
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AgriShieldTheme.primaryContainer,
+                      child: const Icon(Icons.person, size: 20, color: Colors.white),
+                    ),
                   ),
                 ),
                 IconButton(
@@ -79,9 +108,9 @@ class DashboardScreen extends ConsumerWidget {
               right: 16,
             ),
             children: [
-              _buildWelcomeHeader(),
+              _buildWelcomeHeader(ref.watch(userProvider)),
               const SizedBox(height: 24),
-              _buildWeatherBanner(),
+              _buildWeatherBanner(ref.watch(weatherProvider)),
               const SizedBox(height: 24),
               const Text(
                 'Your Farms',
@@ -113,21 +142,42 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWelcomeHeader() {
+  Widget _buildWelcomeHeader(AsyncValue<Map<String, dynamic>> userAsync) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Hello, Rajesh 👋',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            letterSpacing: -0.5,
-            color: AgriShieldTheme.onBackground,
+        userAsync.when(
+          data: (user) {
+            final name = user['name']?.toString().split(' ').first ?? 'Farmer';
+            return Text(
+              'Hello, $name 👋',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+                color: AgriShieldTheme.onBackground,
+              ),
+            );
+          },
+          loading: () => const Text(
+            'Hello 👋',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AgriShieldTheme.onBackground,
+            ),
+          ),
+          error: (err, stack) => const Text(
+            'Hello 👋',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AgriShieldTheme.onBackground,
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(
+        const Text(
           'Here is the status of your farms today.',
           style: TextStyle(
             fontSize: 16,
@@ -138,49 +188,58 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeatherBanner() {
+  Widget _buildWeatherBanner(AsyncValue<Map<String, dynamic>> weatherAsync) {
     return Container(
       decoration: BoxDecoration(
         color: AgriShieldTheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.wb_sunny, color: AgriShieldTheme.onPrimaryContainer, size: 28),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '32°C, Sunny',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AgriShieldTheme.onPrimary,
-                  ),
+      child: weatherAsync.when(
+        data: (weather) {
+          final temp = weather['temp']?.toStringAsFixed(0) ?? '--';
+          final condition = weather['condition'] ?? 'Unknown';
+          
+          return Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
                 ),
-                Text(
-                  'Good conditions for spraying fertilizers today.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AgriShieldTheme.onPrimary.withValues(alpha: 0.9),
-                  ),
+                child: const Icon(Icons.cloud, color: AgriShieldTheme.onPrimaryContainer, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$temp°C, $condition',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: AgriShieldTheme.onPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Weather data fetched successfully.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AgriShieldTheme.onPrimary.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator(color: AgriShieldTheme.onPrimaryContainer)),
+        error: (err, stack) => const Text('Failed to load weather data', style: TextStyle(color: AgriShieldTheme.onPrimaryContainer)),
       ),
     );
   }

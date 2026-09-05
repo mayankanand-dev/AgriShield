@@ -1,8 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../theme.dart';
 import '../../providers.dart';
+import '../../api/api_client.dart';
 
 class FileClaimScreen extends ConsumerStatefulWidget {
   const FileClaimScreen({super.key});
@@ -15,6 +18,10 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
   String _selectedIncident = 'Hailstorm';
   DateTime _selectedDate = DateTime(2024, 5, 14);
   bool _isSubmitting = false;
+  
+  // Store picked files
+  final List<File> _evidenceFiles = [];
+  final ImagePicker _picker = ImagePicker();
 
   final List<Map<String, dynamic>> _incidentTypes = [
     {'name': 'Hailstorm', 'icon': Icons.grain},
@@ -22,6 +29,50 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
     {'name': 'Flood', 'icon': Icons.flood},
     {'name': 'Pest Attack', 'icon': Icons.bug_report},
   ];
+
+  Future<void> _pickImage() async {
+    if (_evidenceFiles.length >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maximum 3 photos allowed')));
+      return;
+    }
+    
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Photo Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source != null) {
+      final XFile? image = await _picker.pickImage(source: source);
+      if (image != null) {
+        setState(() {
+          _evidenceFiles.add(File(image.path));
+        });
+      }
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _evidenceFiles.removeAt(index);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +95,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
       body: ListView(
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + 76,
-          left: 16, right: 16, bottom: 24,
+          left: 16, right: 16, bottom: 120,
         ),
         children: [
           // Instruction
@@ -137,54 +188,104 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
               Text('Upload Evidence Photos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface)),
-              Text('1 of 3 minimum', style: TextStyle(fontSize: 12, color: AgriShieldTheme.onSurfaceVariant)),
+              Text('2 of 3 minimum', style: TextStyle(fontSize: 12, color: AgriShieldTheme.onSurfaceVariant)),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: Container(
-                  height: 100,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), image: const DecorationImage(image: NetworkImage('https://picsum.photos/200'), fit: BoxFit.cover)),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: 4, right: 4,
-                        child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), shape: BoxShape.circle), child: const Icon(Icons.close, size: 16, color: AgriShieldTheme.error)),
-                      )
-                    ],
+              for (int i = 0; i < 3; i++) ...[
+                if (i < _evidenceFiles.length)
+                  Expanded(
+                    child: Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        image: DecorationImage(image: FileImage(_evidenceFiles[i]), fit: BoxFit.cover)
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: 4, right: 4,
+                            child: InkWell(
+                              onTap: () => _removeImage(i),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.8), shape: BoxShape.circle),
+                                child: const Icon(Icons.close, size: 16, color: AgriShieldTheme.error),
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: InkWell(
+                      onTap: _pickImage,
+                      child: _buildAddPhotoBtn(),
+                    )
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: _buildAddPhotoBtn()),
-              const SizedBox(width: 12),
-              Expanded(child: _buildAddPhotoBtn()),
+                if (i < 2) const SizedBox(width: 12),
+              ]
             ],
           ),
           const SizedBox(height: 48),
           
           // Submit
           ElevatedButton(
-            onPressed: _isSubmitting ? null : () async {
+            onPressed: _isSubmitting || _evidenceFiles.length < 2 ? null : () async {
               setState(() => _isSubmitting = true);
-              final repo = ref.read(claimRepositoryProvider);
-              final res = await repo.createClaim({
-                "policy_id": "00000000-0000-0000-0000-000000000000",
-                "incident_date": _selectedDate.toIso8601String().split('T')[0],
-                "event_type": _selectedIncident,
-                "description": "Claim filed via mobile app",
-                "evidence_ids": ["00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-000000000002"]
-              });
-              setState(() => _isSubmitting = false);
               
-              if (!context.mounted) return;
-              if (res.success) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted successfully!')));
-                if (Navigator.canPop(context)) Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${res.error?.message}')));
+              // 1. Upload files first
+              final apiClient = ApiClient();
+              List<String> uploadedFileIds = [];
+              
+              for (var file in _evidenceFiles) {
+                final uploadRes = await apiClient.uploadFile<Map<String, dynamic>>(
+                  '/files', 
+                  file.path, 
+                  (json) => json as Map<String, dynamic>
+                );
+                
+                if (uploadRes.success && uploadRes.data != null) {
+                  uploadedFileIds.add(uploadRes.data!['id']);
+                } else {
+                  if (mounted && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload photo: ${uploadRes.error?.message}')));
+                    setState(() => _isSubmitting = false);
+                  }
+                  return;
+                }
+              }
+
+              // 2. Submit Claim with file IDs
+              final repo = ref.read(claimRepositoryProvider);
+              final policiesAsync = ref.read(insuranceRepositoryProvider).getPolicies();
+              final policies = await policiesAsync;
+              
+              String policyId = "00000000-0000-0000-0000-000000000000"; // fallback
+              if (policies.success && policies.data != null && policies.data!.isNotEmpty) {
+                policyId = policies.data!.first['id'];
+              }
+
+              final res = await repo.createClaim({
+                "policy_id": policyId,
+                "incident_date": _selectedDate.toIso8601String().split('T')[0],
+                "event_type": _selectedIncident.toLowerCase(),
+                "description": "Claim filed via mobile app",
+                "evidence_ids": uploadedFileIds
+              });
+              
+              if (mounted && context.mounted) {
+                setState(() => _isSubmitting = false);
+                if (res.success) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted successfully!')));
+                  if (Navigator.canPop(context)) Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${res.error?.message}')));
+                }
               }
             },
             style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),

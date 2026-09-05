@@ -1,9 +1,56 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../theme.dart';
+import '../../api/api_client.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final ApiClient _apiClient = ApiClient();
+  List<dynamic> _notifications = [];
+  bool _isLoading = true;
+  Timer? _pollingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _loadNotifications(silent: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadNotifications({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
+    
+    final response = await _apiClient.get<List<dynamic>>(
+      '/notifications',
+      (json) => json as List<dynamic>,
+    );
+
+    if (mounted) {
+      if (response.success && response.data != null) {
+        setState(() {
+          _notifications = response.data!;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,70 +66,48 @@ class NotificationsScreen extends StatelessWidget {
               elevation: 0,
               iconTheme: const IconThemeData(color: AgriShieldTheme.onSurface),
               title: const Text('Alerts', style: TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.w600, fontSize: 20)),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.translate, color: AgriShieldTheme.onSurfaceVariant),
-                  onPressed: () {},
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AgriShieldTheme.primaryContainer,
-                    child: const Icon(Icons.person, size: 20, color: Colors.white),
-                  ),
-                ),
-              ],
             ),
           ),
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 76,
-          left: 16, right: 16, bottom: 100,
-        ),
-        children: [
-          _buildNotificationCard(
-            icon: Icons.thunderstorm,
-            iconBg: AgriShieldTheme.error,
-            iconFg: AgriShieldTheme.onError,
-            cardBg: AgriShieldTheme.errorContainer,
-            title: 'Heavy Rainfall Alert',
-            titleColor: AgriShieldTheme.onErrorContainer,
-            subtitle: 'Next 48 hrs. Expected 50-70mm rainfall. Secure harvested crops immediately.',
-            subtitleColor: AgriShieldTheme.onErrorContainer.withValues(alpha: 0.8),
-            metadata: 'High Priority • Just now',
-            metadataColor: AgriShieldTheme.error,
-          ),
-          const SizedBox(height: 16),
-          _buildNotificationCard(
-            icon: Icons.bug_report,
-            iconBg: AgriShieldTheme.secondaryContainer,
-            iconFg: AgriShieldTheme.onSecondaryContainer,
-            cardBg: AgriShieldTheme.secondaryContainer.withValues(alpha: 0.2),
-            title: 'Pest Outbreak Alert',
-            titleColor: AgriShieldTheme.onSurface,
-            subtitle: 'Fall Armyworm detected in your area. Inspect maize crops within 3 days.',
-            subtitleColor: AgriShieldTheme.onSurfaceVariant,
-            metadata: 'Medium Priority • 2 hours ago',
-            metadataColor: AgriShieldTheme.secondaryContainer,
-          ),
-          const SizedBox(height: 16),
-          _buildNotificationCard(
-            icon: Icons.water_drop,
-            iconBg: AgriShieldTheme.primaryContainer,
-            iconFg: AgriShieldTheme.onPrimaryContainer,
-            cardBg: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.3),
-            title: 'Irrigation Reminder',
-            titleColor: AgriShieldTheme.onSurface,
-            subtitle: 'Farm A (Wheat) soil moisture is dropping. Plan irrigation for tomorrow morning.',
-            subtitleColor: AgriShieldTheme.onSurfaceVariant,
-            metadata: 'Low Priority • Yesterday',
-            metadataColor: AgriShieldTheme.onSurfaceVariant,
-          ),
-        ],
-      ),
+      body: _isLoading && _notifications.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : _notifications.isEmpty
+              ? const Center(child: Text("No alerts to show."))
+              : ListView.builder(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 76,
+                    left: 16, right: 16, bottom: 100,
+                  ),
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final notif = _notifications[index];
+                    String title = notif['title'] ?? 'Alert';
+                    if (title == 'policy_status' && notif['message'].toString().contains('Welcome')) {
+                      title = 'Welcome';
+                    } else {
+                      title = title.replaceAll('_', ' ').split(' ').map((str) => str.isNotEmpty ? '${str[0].toUpperCase()}${str.substring(1)}' : '').join(' ');
+                    }
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: _buildNotificationCard(
+                        icon: Icons.notifications,
+                        iconBg: AgriShieldTheme.secondaryContainer,
+                        iconFg: AgriShieldTheme.onSecondaryContainer,
+                        cardBg: notif['is_read'] == true 
+                            ? AgriShieldTheme.surfaceVariant.withValues(alpha: 0.3)
+                            : AgriShieldTheme.secondaryContainer.withValues(alpha: 0.2),
+                        title: title,
+                        titleColor: AgriShieldTheme.onSurface,
+                        subtitle: notif['message'] ?? '',
+                        subtitleColor: AgriShieldTheme.onSurfaceVariant,
+                        metadata: notif['created_at']?.toString().substring(0, 10) ?? 'Just now',
+                        metadataColor: AgriShieldTheme.secondaryContainer,
+                      ),
+                    );
+                  },
+                ),
     );
   }
 

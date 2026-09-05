@@ -107,8 +107,17 @@ function createMockResponse<T>(data: T): Envelope<T> {
 export type User = {
   id: string;
   email: string;
+  phone?: string;
   name: string;
   role: 'ADMIN' | 'INSURER' | 'FARMER';
+  is_active?: boolean;
+};
+
+export type Farmer = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
 };
 
 export type Notification = {
@@ -137,8 +146,13 @@ export const api = {
     return res.data;
   },
   getMe: async (): Promise<Envelope<User>> => {
-    if (IS_DEMO) return createMockResponse({ id: '1', email: 'admin@agrishield.com', name: 'Admin User', role: 'ADMIN' });
+    if (IS_DEMO) return createMockResponse({ id: '1', email: 'admin@agrishield.com', phone: '', name: 'Admin User', role: 'ADMIN' });
     const res = await apiClient.get('/auth/me');
+    return res.data;
+  },
+  getFarmers: async (page: number = 1, page_size: number = 1000): Promise<Envelope<Farmer[]>> => {
+    if (IS_DEMO) return createMockResponse([{ id: '2', email: 'rajesh@example.com', phone: '+919876543210', name: 'Rajesh Kumar' }]);
+    const res = await apiClient.get(`/admin/farmers?page=${page}&page_size=${page_size}`);
     return res.data;
   },
   getNotifications: async (): Promise<Envelope<Notification[]>> => {

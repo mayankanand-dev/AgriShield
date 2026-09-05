@@ -13,9 +13,10 @@ from db.models import User, Farm, InsurancePolicy, Claim, FarmStatus, PolicyStat
 from core.security import get_password_hash
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-# Hardcode the DB URL for the script to avoid pydantic dotenv loading bugs
-DATABASE_URL = "postgresql+asyncpg://postgres.lkwhqaiqzdutsxgeggko:AgriShield%40svh1@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
+import os
+from core.config import settings
 
+DATABASE_URL = os.getenv("DATABASE_URL") or settings.DATABASE_URL
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
