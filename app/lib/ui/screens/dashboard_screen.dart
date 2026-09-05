@@ -5,6 +5,7 @@ import '../../providers.dart';
 import '../../theme.dart';
 import 'farm_detail_screen.dart';
 import 'add_farm_screen.dart';
+import 'insurance_quote_screen.dart';
 
 import 'dart:async';
 
@@ -415,13 +416,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             ],
                           ),
                         if (!hasInsurance)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AgriShieldTheme.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
+                          InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => InsuranceQuoteScreen(
+                                    farm: farm,
+                                    farmId: farm['id']?.toString() ?? '',
+                                    crop: farm['crop'] ?? 'Wheat',
+                                    areaM2: (farm['area_m2'] is num) ? (farm['area_m2'] as num).toDouble() : 10000.0,
+                                    farmName: farm['name'],
+                                  ),
+                                ),
+                              ).then((_) {
+                                ref.invalidate(farmsProvider);
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AgriShieldTheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text('Protect Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.primary)),
                             ),
-                            child: const Text('Protect Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.primary)),
                           )
                         else
                           const Icon(Icons.chevron_right, color: AgriShieldTheme.onSurfaceVariant),

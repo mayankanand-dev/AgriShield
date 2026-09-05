@@ -23,10 +23,9 @@ def validate_farm_boundary(geo_polygon: GeoPolygon) -> PolygonValidationResult:
     if not poly.is_valid:
         return PolygonValidationResult(valid=False, reason=PolygonValidationResultReason.SELF_INTERSECTING, area_m2=0.0)
         
-    # Calculate area in square meters (approximate WGS84 to Pseudo-Mercator projection)
-    project = pyproj.Transformer.from_crs(pyproj.CRS("EPSG:4326"), pyproj.CRS("EPSG:3857"), always_xy=True).transform
-    poly_m2 = transform(project, poly)
-    area = poly_m2.area
+    # Calculate true geodesic area in square meters on WGS84 ellipsoid
+    geod = pyproj.Geod(ellps="WGS84")
+    area = abs(geod.geometry_area_perimeter(poly)[0])
     
     # Sensible defaults for area: 100 sqm to 100,000,000 sqm (10,000 Ha) for hackathon demo
     if area < 100:

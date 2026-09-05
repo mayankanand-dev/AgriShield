@@ -44,8 +44,8 @@ async def get_quote(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        farm_uuid = uuid.UUID(request.farm_id)
-    except ValueError:
+        farm_uuid = request.farm_id if isinstance(request.farm_id, uuid.UUID) else uuid.UUID(str(request.farm_id))
+    except (ValueError, TypeError, AttributeError):
         return _error("VALIDATION_ERROR", "Invalid Farm UUID")
         
     farm = await db.get(Farm, farm_uuid)
@@ -56,7 +56,13 @@ async def get_quote(
     if current_user.role != UserRole.ADMIN and farm.user_id != current_user.id:
         return _error("FORBIDDEN", "Not allowed to quote this farm", 403)
     
-    pricing = calculate_premium(area_m2=request.area_m2, crop=request.crop)
+    crop = request.crop or farm.crop or "Wheat"
+    area_m2 = request.area_m2 if request.area_m2 > 0 else (farm.area_m2 or 10000.0)
+    
+    pricing = calculate_premium(area_m2=area_m2, crop=crop)
+    pricing["farm_id"] = str(farm.id)
+    pricing["farm_name"] = farm.name
+    pricing["crop"] = crop
     return _ok(pricing)
 
 
@@ -92,8 +98,8 @@ async def create_policy(
         return _error("VALIDATION_ERROR", "Idempotency-Key header is required")
 
     try:
-        farm_uuid = uuid.UUID(policy_in.farm_id)
-    except ValueError:
+        farm_uuid = policy_in.farm_id if isinstance(policy_in.farm_id, uuid.UUID) else uuid.UUID(str(policy_in.farm_id))
+    except (ValueError, TypeError, AttributeError):
         return _error("VALIDATION_ERROR", "Invalid Farm UUID")
         
     farm = await db.get(Farm, farm_uuid)

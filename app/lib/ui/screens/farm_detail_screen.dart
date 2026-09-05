@@ -92,7 +92,7 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.only(left: 16, bottom: 58, right: 16),
                 title: Text(
-                  farmName,
+                  '$farmName • $crop',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
@@ -225,9 +225,11 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
           title: 'PMFBY Insurance Quote',
           subtitle: 'Subsidized crop protection with blockchain audit',
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => InsuranceQuoteScreen(
-            farmId: widget.farm['id'] ?? '123',
+            farm: widget.farm,
+            farmId: widget.farm['id']?.toString() ?? '',
             crop: widget.farm['crop'] ?? 'Wheat',
-            areaM2: areaM2 > 0 ? areaM2 : 20000,
+            areaM2: areaM2 > 0 ? areaM2 : 10000.0,
+            farmName: widget.farm['name'],
           ))),
         ),
       ],
@@ -533,9 +535,11 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
         ElevatedButton(
           onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => InsuranceQuoteScreen(
-              farmId: widget.farm['id'] ?? '123',
+              farm: widget.farm,
+              farmId: widget.farm['id']?.toString() ?? '',
               crop: widget.farm['crop'] ?? 'Wheat',
-              areaM2: areaM2,
+              areaM2: areaM2 > 0 ? areaM2 : 10000.0,
+              farmName: widget.farm['name'],
             )));
           },
           style: ElevatedButton.styleFrom(
