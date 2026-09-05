@@ -387,6 +387,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
 
               // District in MP
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedDistrict,
                 decoration: InputDecoration(
                   labelText: 'District (जिला - मध्य प्रदेश) *',
@@ -395,7 +396,10 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
                   filled: true,
                   fillColor: AgriShieldTheme.surfaceContainerLowest,
                 ),
-                items: _mpDistricts.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                items: _mpDistricts.map((d) => DropdownMenuItem(
+                  value: d,
+                  child: Text(d, overflow: TextOverflow.ellipsis, maxLines: 1),
+                )).toList(),
                 onChanged: (val) {
                   if (val != null) {
                     setState(() {
@@ -416,6 +420,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
 
               // Crop Dropdown
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedCrop,
                 decoration: InputDecoration(
                   labelText: 'Cultivated Crop (फसल का प्रकार) *',
@@ -426,7 +431,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
                 ),
                 items: _cropOptions.map((c) => DropdownMenuItem(
                   value: c['name'],
-                  child: Text(c['label']!, style: const TextStyle(fontSize: 13)),
+                  child: Text(c['label']!, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 1),
                 )).toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _selectedCrop = val);
@@ -483,6 +488,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
 
               // Soil Type
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedSoilType,
                 decoration: InputDecoration(
                   labelText: 'Soil Classification (मिट्टी का प्रकार)',
@@ -493,7 +499,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
                 ),
                 items: _soilTypes.map((s) => DropdownMenuItem(
                   value: s,
-                  child: Text(s, style: const TextStyle(fontSize: 13)),
+                  child: Text(s, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 1),
                 )).toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _selectedSoilType = val);
@@ -503,6 +509,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
 
               // Irrigation
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedIrrigation,
                 decoration: InputDecoration(
                   labelText: 'Irrigation Facility (सिंचाई सुविधा)',
@@ -513,7 +520,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
                 ),
                 items: _irrigationSources.map((i) => DropdownMenuItem(
                   value: i,
-                  child: Text(i, style: const TextStyle(fontSize: 13)),
+                  child: Text(i, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 1),
                 )).toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _selectedIrrigation = val);
@@ -523,6 +530,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
 
               // Ownership
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedOwnership,
                 decoration: InputDecoration(
                   labelText: 'Tenure / Ownership (स्वामित्व)',
@@ -533,7 +541,7 @@ class _FarmDetailsFormScreenState extends ConsumerState<FarmDetailsFormScreen> {
                 ),
                 items: _ownershipTypes.map((o) => DropdownMenuItem(
                   value: o,
-                  child: Text(o, style: const TextStyle(fontSize: 13)),
+                  child: Text(o, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 1),
                 )).toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _selectedOwnership = val);
