@@ -73,6 +73,12 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/logo.webp
+    - assets/images/wheat.webp
+    - assets/images/soybean.webp
+    - assets/images/rice.webp
+    - assets/images/cotton.webp
+    - assets/images/maize.webp
+    - assets/images/unsown.webp
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
