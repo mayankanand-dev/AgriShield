@@ -514,27 +514,19 @@ The ground-truth agricultural training physics models yield as a base crop capac
 
 2. **Soil Quality Score ($S_{\text{soil}}$)** (Weight: $0.20$):
 
-   $$
-   S_{\text{soil}} = 0.55 + 0.20 \cdot \left(\frac{\text{Nitrogen}}{300.0}\right) + 0.10 \cdot \left(\frac{\text{Phosphorus}}{30.0}\right) + 0.10 \cdot \left(\frac{\text{Potassium}}{200.0}\right)
-   $$
+   $S_{\text{soil}} = 0.55 + 0.20 \cdot \left(\frac{\text{Nitrogen}}{300.0}\right) + 0.10 \cdot \left(\frac{\text{Phosphorus}}{30.0}\right) + 0.10 \cdot \left(\frac{\text{Potassium}}{200.0}\right)$
 
 3. **Precipitation Suitability ($S_{\text{rain}}$)** (Weight: $0.20$, Gaussian centered at $700\text{ mm}$):
 
-   $$
-   S_{\text{rain}} = \exp\left( -\left(\frac{\text{Rainfall} - 700}{350}\right)^2 \right)
-   $$
+   $S_{\text{rain}} = \exp\left( -\left(\frac{\text{Rainfall} - 700}{350}\right)^2 \right)$
 
 4. **Thermal Suitability ($S_{\text{temp}}$)** (Weight: $0.20$, Gaussian centered at $27^\circ\text{C}$):
 
-   $$
-   S_{\text{temp}} = \exp\left( -\left(\frac{T_{\text{mean}} - 27}{7}\right)^2 \right)
-   $$
+   $S_{\text{temp}} = \exp\left( -\left(\frac{T_{\text{mean}} - 27}{7}\right)^2 \right)$
 
 5. **Remote Sensing Vegetation Vigor ($S_{\text{veg}}$)** (Weight: $0.45$):
 
-   $$
-   S_{\text{veg}} = 0.55 + 0.75 \cdot (\text{NDVI}_{\text{mean}} - 0.55) + 0.35 \cdot \text{NDMI}_{\text{mean}} + 0.15 \cdot (\text{NDWI}_{\text{mean}} + 0.15)
-   $$
+   $S_{\text{veg}} = 0.55 + 0.75 \cdot (\text{NDVI}_{\text{mean}} - 0.55) + 0.35 \cdot \text{NDMI}_{\text{mean}} + 0.15 \cdot (\text{NDWI}_{\text{mean}} + 0.15)$
 
 6. **Stress Penalties ($P_{\text{stress}}$)**:
    - Heat Stress Penalty: $P_{\text{heat}} = 0.035 \times \text{Heat Stress Days}$
@@ -544,13 +536,9 @@ The ground-truth agricultural training physics models yield as a base crop capac
 
 7. **Composite Yield Formulation**:
 
-   $$
-   \text{Multiplier} = \text{clip}\Big(0.65 + 0.20 S_{\text{soil}} + 0.20 S_{\text{rain}} + 0.20 S_{\text{temp}} + 0.45 S_{\text{veg}} - P_{\text{stress}},\ 0.35,\ 1.45\Big)
-   $$
+   $\text{Multiplier} = \text{clip}\Big(0.65 + 0.20 S_{\text{soil}} + 0.20 S_{\text{rain}} + 0.20 S_{\text{temp}} + 0.45 S_{\text{veg}} - P_{\text{stress}},\ 0.35,\ 1.45\Big)$
 
-   $$
-   \text{Yield}_{\text{t/ha}} = \text{clip}\Big( Y_{\text{base}} \times \text{Multiplier} + \mathcal{N}(0, 0.22),\ 0.2,\ 8.5 \Big)
-   $$
+   $\text{Yield}_{\text{t/ha}} = \text{clip}\Big( Y_{\text{base}} \times \text{Multiplier} + \mathcal{N}(0, 0.22),\ 0.2,\ 8.5 \Big)$
 
 #### Ensemble Confidence Metric Calculation
 At inference time, confidence is derived dynamically from the **inter-tree coefficient of variation ($\text{CV}$)** across all 300 decision tree estimators ($T_1, T_2, \dots, T_{300}$):
@@ -605,31 +593,21 @@ $$
 
 1. **Weather Hazard Component ($\mathcal{R}_{\text{weather}}$)** (Effective Weight: $25\%$):
 
-   $$
-   \mathcal{R}_{\text{weather}} = 0.30 \cdot \text{clip}\left(\frac{\text{Heat Stress Days}}{10}, 0, 1\right) + 0.20 \cdot \text{clip}\left(\frac{\text{Excessive Rain Index}}{8}, 0, 1\right)
-   $$
+   $\mathcal{R}_{\text{weather}} = 0.30 \cdot \text{clip}\left(\frac{\text{Heat Stress Days}}{10}, 0, 1\right) + 0.20 \cdot \text{clip}\left(\frac{\text{Excessive Rain Index}}{8}, 0, 1\right)$
 
 2. **Crop Health & Biological Component ($\mathcal{R}_{\text{crop}}$)** (Effective Weight: $35\%$):
 
-   $$
-   \mathcal{R}_{\text{crop}} = 0.35 \cdot \text{Disease Probability} + 0.35 \cdot \text{clip}\left(\frac{0.75 - \text{NDVI}_{\text{mean}}}{0.50}, 0, 1\right)
-   $$
+   $\mathcal{R}_{\text{crop}} = 0.35 \cdot \text{Disease Probability} + 0.35 \cdot \text{clip}\left(\frac{0.75 - \text{NDVI}_{\text{mean}}}{0.50}, 0, 1\right)$
 
    Where Disease Probability is computed through logistic activation of climatic factors:
 
-   $$
-   z_{\text{disease}} = -2.0 + 0.035(\text{Humidity} - 65) + 0.45\left(\frac{R_{\text{7d}}}{50}\right) - 2.0(\text{NDVI} - 0.55) + 0.08(T_{\text{mean}} - 25)
-   $$
+   $z_{\text{disease}} = -2.0 + 0.035(\text{Humidity} - 65) + 0.45\left(\frac{R_{\text{7d}}}{50}\right) - 2.0(\text{NDVI} - 0.55) + 0.08(T_{\text{mean}} - 25)$
 
-   $$
-   \text{Disease Probability} = \text{clip}\left(\frac{1}{1 + e^{-z_{\text{disease}}}},\ 0.01,\ 0.98\right)
-   $$
+   $\text{Disease Probability} = \text{clip}\left(\frac{1}{1 + e^{-z_{\text{disease}}}},\ 0.01,\ 0.98\right)$
 
 3. **Moisture Stress Component ($\mathcal{R}_{\text{moisture}}$)** (Effective Weight: $20\%$):
 
-   $$
-   \mathcal{R}_{\text{moisture}} = 0.25 \cdot \text{clip}\left(\frac{0.05 - \text{NDMI}_{\text{mean}}}{0.40}, 0, 1\right)
-   $$
+   $\mathcal{R}_{\text{moisture}} = 0.25 \cdot \text{clip}\left(\frac{0.05 - \text{NDMI}_{\text{mean}}}{0.40}, 0, 1\right)$
 
 4. **Soil Degradation Component ($\mathcal{R}_{\text{soil}}$)** (Effective Weight: $20\%$):
    - $\text{pH Risk} = \text{clip}\left(\frac{|\text{Soil pH} - 6.7|}{1.8}, 0, 1\right)$
@@ -638,9 +616,7 @@ $$
 
 5. **Historical Exposure Component ($\mathcal{R}_{\text{historical}}$)** (Effective Weight: $25\%$):
 
-   $$
-   \mathcal{R}_{\text{historical}} = 0.25 \cdot \text{Historical Loss Rate}
-   $$
+   $\mathcal{R}_{\text{historical}} = 0.25 \cdot \text{Historical Loss Rate}$
 
 #### Final Sigmoidal Risk Scaling
 The composite latent score is passed through a steep logistic function calibrated to Indian agricultural conditions:
@@ -733,9 +709,7 @@ $$
   - `non_damaged`: $0.0\%$ base damage.
   - `damaged`: $60.0\%$ base damage, scaled dynamically by the softmax prediction probability $P(\text{damaged})$:
 
-     $$
-     \text{Damage \%} = \text{round}\Big(P(\text{damaged}) \times 65.0\% + \Delta_{\text{calamity}},\ 1\Big)
-     $$
+     $\text{Damage \%} = \text{round}\Big(P(\text{damaged}) \times 65.0\% + \Delta_{\text{calamity}},\ 1\Big)$
 
     Where $\Delta_{\text{calamity}}$ applies empirical severity offsets based on incident type (Hailstorm: $+15\%$, Severe Flood: $+20\%$, Drought: $+10\%$).
 - **Cryptographic Claim Seal**: The output damage percentage and model confidence are immediately formatted into the canonical JSON dictionary and signed on Polygon Amoy.
@@ -757,12 +731,8 @@ $$
      - **pH Value**: `r"pH[^\d]*(\d+\.?\d*)"`
   4. **Dynamic Confidence Formula**:
 
-      $$
-      \text{Found Count} = \sum_{k \in \{N, P, K, pH\}} \mathbb{I}(k \text{ extracted successfully})
-      $$
-      $$
-      \text{OCR Confidence} = 0.50 + \left(\frac{\text{Found Count}}{4}\right) \times 0.45
-      $$
+      $\text{Found Count} = \sum_{k \in \{N, P, K, pH\}} \mathbb{I}(k \text{ extracted successfully})$
+      $\text{OCR Confidence} = 0.50 + \left(\frac{\text{Found Count}}{4}\right) \times 0.45$
 
   5. **High-Availability Fallback**: If any nutrient value cannot be resolved due to document degradation, the service transparently injects agro-climatic regional baseline averages ($\text{N}: 45.0\text{ kg/ha}, \text{P}: 22.0\text{ kg/ha}, \text{K}: 180.0\text{ kg/ha}, \text{pH}: 6.5$) while flagging the confidence accordingly.
 
@@ -810,21 +780,15 @@ The engine evaluates real-time ambient metrics to trigger automated agronomic wa
 - Computes pixel-level vegetation indices across a 45-day temporal look-back window:
   - **NDVI (Normalized Difference Vegetation Index)**: Sensitive to chlorophyll absorption:
 
-    $$
-    \text{NDVI} = \frac{\text{Band 8 (NIR)} - \text{Band 4 (Red)}}{\text{Band 8 (NIR)} + \text{Band 4 (Red)}}
-    $$
+    $\text{NDVI} = \frac{\text{Band 8 (NIR)} - \text{Band 4 (Red)}}{\text{Band 8 (NIR)} + \text{Band 4 (Red)}}$
 
   - **NDWI (Normalized Difference Water Index)**: Sensitive to surface waterlogging and flood inundation:
 
-    $$
-    \text{NDWI} = \frac{\text{Band 8 (NIR)} - \text{Band 11 (SWIR-1)}}{\text{Band 8 (NIR)} + \text{Band 11 (SWIR-1)}}
-    $$
+    $\text{NDWI} = \frac{\text{Band 8 (NIR)} - \text{Band 11 (SWIR-1)}}{\text{Band 8 (NIR)} + \text{Band 11 (SWIR-1)}}$
 
   - **NDMI (Normalized Difference Moisture Index)**: Sensitive to crop canopy moisture stress:
 
-    $$
-    \text{NDMI} = \frac{\text{Band 8 (NIR)} - \text{Band 12 (SWIR-2)}}{\text{Band 8 (NIR)} + \text{Band 12 (SWIR-2)}}
-    $$
+    $\text{NDMI} = \frac{\text{Band 8 (NIR)} - \text{Band 12 (SWIR-2)}}{\text{Band 8 (NIR)} + \text{Band 12 (SWIR-2)}}$
 
 #### 2. Agro-Meteorological Harvester (`ai/collection/weather/`)
 - Fetches current weather observations and 5-day / 3-hour forecasts from OpenWeatherMap using the farm's centroid latitude and longitude.
