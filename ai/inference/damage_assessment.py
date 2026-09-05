@@ -1,6 +1,2 @@
-"""Damage assessment inference."""
-
-def predict_damage(image_features):
-    """Predict crop damage from image features."""
-    # TODO: Implement damage assessment
-    pass
+"""Damage assessment inference — delegates to cv_pipeline.predict_damage."""
+from inference.cv_pipeline import predict_damage  # noqa: F401
