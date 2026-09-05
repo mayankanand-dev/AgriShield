@@ -474,13 +474,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       ),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            color: AgriShieldTheme.surfaceVariant,
-                            child: const Icon(Icons.landscape, color: Colors.grey),
-                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          child: _buildCropVectorThumbnail(farm['crop']),
                         ),
                       ],
                     ),
@@ -603,6 +598,140 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCropVectorThumbnail(dynamic rawCrop) {
+    final cropStr = (rawCrop ?? '').toString().trim().toLowerCase();
+    final bool isUnsown = cropStr.isEmpty || cropStr == 'unsown' || cropStr == 'fallow' || cropStr == 'none';
+
+    if (isUnsown) {
+      // Empty Field Vector Illustration
+      return Container(
+        width: 68,
+        height: 68,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.amber.shade100, Colors.orange.shade50],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: Colors.orange.shade200, width: 1.2),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              bottom: 4,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(4, (i) => Container(
+                  width: 10,
+                  height: 3,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.brown.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                )),
+              ),
+            ),
+            Icon(Icons.terrain, color: Colors.brown.shade400, size: 30),
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade400,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Determine tailored vector colors and icon per crop
+    Color bgStart;
+    Color bgEnd;
+    Color iconColor;
+    IconData icon;
+    String badge;
+
+    if (cropStr.contains('wheat') || cropStr.contains('gehun')) {
+      bgStart = const Color(0xFFFFF8E1);
+      bgEnd = const Color(0xFFFFECB3);
+      iconColor = const Color(0xFFF57F17);
+      icon = Icons.grass;
+      badge = '🌾';
+    } else if (cropStr.contains('soy') || cropStr.contains('bean')) {
+      bgStart = const Color(0xFFE8F5E9);
+      bgEnd = const Color(0xFFC8E6C9);
+      iconColor = const Color(0xFF2E7D32);
+      icon = Icons.eco;
+      badge = '🌱';
+    } else if (cropStr.contains('rice') || cropStr.contains('paddy') || cropStr.contains('dhan')) {
+      bgStart = const Color(0xFFE0F7FA);
+      bgEnd = const Color(0xFFB2EBF2);
+      iconColor = const Color(0xFF00838F);
+      icon = Icons.water_drop;
+      badge = '🌾';
+    } else if (cropStr.contains('cotton') || cropStr.contains('kapas')) {
+      bgStart = const Color(0xFFF3E5F5);
+      bgEnd = const Color(0xFFE1BEE7);
+      iconColor = const Color(0xFF6A1B9A);
+      icon = Icons.cloud;
+      badge = '☁️';
+    } else if (cropStr.contains('maize') || cropStr.contains('corn') || cropStr.contains('makka')) {
+      bgStart = const Color(0xFFFFFDE7);
+      bgEnd = const Color(0xFFFFF9C4);
+      iconColor = const Color(0xFFFBC02D);
+      icon = Icons.grain;
+      badge = '🌽';
+    } else {
+      bgStart = const Color(0xFFE8F5E9);
+      bgEnd = const Color(0xFFDCEDC8);
+      iconColor = const Color(0xFF33691E);
+      icon = Icons.park;
+      badge = '🌿';
+    }
+
+    return Container(
+      width: 68,
+      height: 68,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [bgStart, bgEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: iconColor.withValues(alpha: 0.25), width: 1.2),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            top: 4,
+            left: 6,
+            child: Text(badge, style: const TextStyle(fontSize: 14)),
+          ),
+          Icon(icon, color: iconColor, size: 32),
+          Positioned(
+            bottom: 3,
+            child: Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
