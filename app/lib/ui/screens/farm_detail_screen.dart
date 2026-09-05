@@ -734,7 +734,10 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
           // File Claim Button
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const FileClaimScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => FileClaimScreen(
+                policyId: activePolicy['id']?.toString(),
+                farmId: _farmData['id']?.toString(),
+              )));
             },
             icon: const Icon(Icons.report_problem_outlined),
             label: const Text('File Disaster Claim Against Policy', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),

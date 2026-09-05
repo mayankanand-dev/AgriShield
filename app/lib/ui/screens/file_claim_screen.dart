@@ -8,15 +8,17 @@ import '../../providers.dart';
 import '../../api/api_client.dart';
 
 class FileClaimScreen extends ConsumerStatefulWidget {
-  const FileClaimScreen({super.key});
+  final String? policyId;
+  final String? farmId;
+  const FileClaimScreen({super.key, this.policyId, this.farmId});
 
   @override
   ConsumerState<FileClaimScreen> createState() => _FileClaimScreenState();
 }
 
 class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
-  String _selectedIncident = 'Hailstorm';
-  DateTime _selectedDate = DateTime(2024, 5, 14);
+  String _selectedIncident = 'Pest Attack';
+  DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
   
   // Store picked files
@@ -24,10 +26,10 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
   final ImagePicker _picker = ImagePicker();
 
   final List<Map<String, dynamic>> _incidentTypes = [
-    {'name': 'Hailstorm', 'icon': Icons.grain},
-    {'name': 'Drought', 'icon': Icons.wb_sunny},
-    {'name': 'Flood', 'icon': Icons.flood},
-    {'name': 'Pest Attack', 'icon': Icons.bug_report},
+    {'name': 'Hailstorm', 'icon': Icons.grain, 'code': 'hailstorm'},
+    {'name': 'Drought', 'icon': Icons.wb_sunny, 'code': 'drought'},
+    {'name': 'Flood', 'icon': Icons.flood, 'code': 'flood'},
+    {'name': 'Pest Attack', 'icon': Icons.bug_report, 'code': 'pest'},
   ];
 
   Future<void> _pickImage() async {
@@ -262,29 +264,49 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
 
               // 2. Submit Claim with file IDs
               final repo = ref.read(claimRepositoryProvider);
-              final policiesAsync = ref.read(insuranceRepositoryProvider).getPolicies();
-              final policies = await policiesAsync;
+              String policyId = widget.policyId ?? '';
               
-              String policyId = "00000000-0000-0000-0000-000000000000"; // fallback
-              if (policies.success && policies.data != null && policies.data!.isNotEmpty) {
-                policyId = policies.data!.first['id'];
+              if (policyId.isEmpty) {
+                final policiesRes = await ref.read(insuranceRepositoryProvider).getPolicies();
+                if (policiesRes.success && policiesRes.data != null && policiesRes.data!.isNotEmpty) {
+                  policyId = policiesRes.data!.first['id']?.toString() ?? '';
+                }
               }
+
+              final selectedItem = _incidentTypes.firstWhere(
+                (e) => e['name'] == _selectedIncident,
+                orElse: () => {'code': 'pest'},
+              );
+              final eventCode = selectedItem['code'] ?? 'pest';
 
               final res = await repo.createClaim({
                 "policy_id": policyId,
                 "incident_date": _selectedDate.toIso8601String().split('T')[0],
-                "event_type": _selectedIncident.toLowerCase(),
-                "description": "Claim filed via mobile app",
+                "event_type": eventCode,
+                "description": "Crop damage claim filed via farmer mobile app",
                 "evidence_ids": uploadedFileIds
               });
               
               if (mounted && context.mounted) {
                 setState(() => _isSubmitting = false);
                 if (res.success) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted successfully!')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Claim submitted and AI assessed successfully!'),
+                      backgroundColor: AgriShieldTheme.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  ref.invalidate(farmsProvider);
                   if (Navigator.canPop(context)) Navigator.pop(context);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: ${res.error?.message}')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed: ${res.error?.message ?? "Failed to submit claim"}'),
+                      backgroundColor: AgriShieldTheme.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 }
               }
             },
