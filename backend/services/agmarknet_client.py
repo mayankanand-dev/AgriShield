@@ -1,10 +1,11 @@
+import os
 import httpx
 import logging
 from typing import Optional, Dict, Any
 
 logger = logging.getLogger("agrishield.agmarknet")
 
-AGMARKNET_API_KEY = "579b464db66ec23bdd0000017b02f24f1c2140614737c4b2c4c478a8"
+AGMARKNET_API_KEY = os.getenv("AGMARKNET_API_KEY", "")
 AGMARKNET_BASE_URL = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 
 # Official 2025-26 Mandi & MSP Benchmark Rates in INR per Quintal (100 kg)

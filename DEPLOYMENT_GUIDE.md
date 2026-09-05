@@ -80,7 +80,7 @@ This plan covers deploying the entire AgriShield ecosystem remotely so you can d
 2. Set **Root Directory** to `web`.
 3. Add Environment Variables:
    - `VITE_API_BASE_URL`: `https://agrishield-api.onrender.com/api/v1`
-   - `VITE_AGMARKNET_API_KEY`: `579b464db66ec23bdd0000017b02f24f1c2140614737c4b2c4c478a8`
+   - `VITE_AGMARKNET_API_KEY`: `<YOUR_AGMARKNET_API_KEY>`
 4. Deploy! Your admin dashboard is instantly live at `https://agrishield.vercel.app`.
 
 ---
