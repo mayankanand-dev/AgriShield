@@ -66,11 +66,11 @@ export default function Policies() {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <p className="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Premium</p>
-                    <p className="font-semibold">${policy.premium_amount.toLocaleString()}</p>
+                    <p className="font-semibold">₹{policy.premium_amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Coverage</p>
-                    <p className="font-semibold text-primary">${policy.coverage_amount.toLocaleString()}</p>
+                    <p className="font-semibold text-primary">₹{policy.coverage_amount.toLocaleString()}</p>
                   </div>
                 </div>
                 

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import '../../providers.dart';
 import '../../theme.dart';
 import 'farm_details_form_screen.dart';
 
@@ -18,6 +17,7 @@ class AddFarmScreen extends ConsumerStatefulWidget {
 class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
   final List<LatLng> _polygonPoints = [];
   final MapController _mapController = MapController();
+  bool _isSatellite = false;
 
   // Madhya Pradesh coordinates (Central MP / Bhopal & Sehore belt)
   static const LatLng _mpCenter = LatLng(23.2599, 77.4126);
@@ -80,7 +80,7 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
               initialCenter: _mpCenter, // Centered on Madhya Pradesh
               initialZoom: 12.0, // Zoomed in to agricultural fields
               minZoom: 6.0,
-              maxZoom: 18.0,
+              maxZoom: 19.0,
               onTap: (tapPosition, point) {
                 setState(() {
                   _polygonPoints.add(point);
@@ -89,16 +89,21 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: _isSatellite
+                    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'dev.mayankanand.agrishield',
+                maxZoom: 19.0,
               ),
               if (_polygonPoints.isNotEmpty)
                 PolygonLayer(
                   polygons: <Polygon<Object>>[
                     Polygon<Object>(
                       points: _polygonPoints,
-                      color: AgriShieldTheme.primary.withValues(alpha: 0.3),
-                      borderColor: AgriShieldTheme.primary,
+                      color: _isSatellite
+                          ? AgriShieldTheme.secondaryContainer.withValues(alpha: 0.35)
+                          : AgriShieldTheme.primary.withValues(alpha: 0.3),
+                      borderColor: _isSatellite ? AgriShieldTheme.secondaryContainer : AgriShieldTheme.primary,
                       borderStrokeWidth: 3,
                     ),
                   ],
@@ -107,6 +112,7 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                 markers: _polygonPoints.asMap().entries.map((entry) {
                   int idx = entry.key;
                   LatLng point = entry.value;
+                  final markerColor = _isSatellite ? AgriShieldTheme.secondaryContainer : AgriShieldTheme.primary;
                   return Marker(
                     point: point,
                     width: 24,
@@ -115,15 +121,15 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                       decoration: BoxDecoration(
                         color: AgriShieldTheme.surfaceContainerLowest,
                         shape: BoxShape.circle,
-                        border: Border.all(color: AgriShieldTheme.primary, width: 3),
+                        border: Border.all(color: markerColor, width: 3),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 4),
                         ],
                       ),
                       child: Center(
                         child: Text(
                           '${idx + 1}',
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AgriShieldTheme.primary),
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: markerColor),
                         ),
                       ),
                     ),
@@ -133,23 +139,58 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
             ],
           ),
 
-          // Top Bar: Instructions & MP District Quick-Pills
+          // Top Bar: Instructions, Layer Switcher Pill & MP District Quick-Pills
           Positioned(
             top: MediaQuery.of(context).padding.top + 68,
             left: 16,
             right: 16,
             child: Column(
               children: [
-                // Instruction Banner
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                // Top Row: Instruction Banner + Map Layer Switcher (Street / Satellite)
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AgriShieldTheme.surface.withValues(alpha: 0.95),
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2)),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.touch_app, color: AgriShieldTheme.primary, size: 18),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    _polygonPoints.isEmpty
+                                        ? 'Tap corners to mark boundary'
+                                        : '${_polygonPoints.length} points marked',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurface),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Street / Satellite Layer Switcher Pill
+                    Container(
+                      height: 38,
+                      padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
                         color: AgriShieldTheme.surface.withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2)),
                         ],
@@ -157,18 +198,64 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.touch_app, color: AgriShieldTheme.primary, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            _polygonPoints.isEmpty
-                                ? 'Tap corners of your farm on the map'
-                                : '${_polygonPoints.length} boundary points marked',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AgriShieldTheme.onSurface),
+                          GestureDetector(
+                            onTap: () {
+                              if (_isSatellite) setState(() => _isSatellite = false);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: !_isSatellite ? AgriShieldTheme.primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.map, size: 13, color: !_isSatellite ? Colors.white : AgriShieldTheme.onSurfaceVariant),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Street',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: !_isSatellite ? Colors.white : AgriShieldTheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              if (!_isSatellite) setState(() => _isSatellite = true);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: _isSatellite ? AgriShieldTheme.primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.satellite_alt, size: 13, color: _isSatellite ? Colors.white : AgriShieldTheme.onSurfaceVariant),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Satellite',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _isSatellite ? Colors.white : AgriShieldTheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 8),
 
@@ -178,7 +265,7 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: _mpDistricts.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
                       final d = _mpDistricts[index];
                       return ActionChip(
@@ -204,6 +291,17 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
             top: MediaQuery.of(context).padding.top + 170,
             child: Column(
               children: [
+                _buildMapFloatingBtn(
+                  icon: _isSatellite ? Icons.map_outlined : Icons.satellite_alt,
+                  tooltip: _isSatellite ? 'Switch to Street Map' : 'Switch to Satellite View',
+                  isActive: _isSatellite,
+                  onTap: () {
+                    setState(() {
+                      _isSatellite = !_isSatellite;
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
                 _buildMapFloatingBtn(
                   icon: Icons.add,
                   tooltip: 'Zoom In',
@@ -385,19 +483,20 @@ class _AddFarmScreenState extends ConsumerState<AddFarmScreen> {
     required IconData icon,
     required String tooltip,
     required VoidCallback onTap,
+    bool isActive = false,
   }) {
     return Container(
       width: 42,
       height: 42,
       decoration: BoxDecoration(
-        color: AgriShieldTheme.surfaceContainerLowest,
+        color: isActive ? AgriShieldTheme.primary : AgriShieldTheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2)),
         ],
       ),
       child: IconButton(
-        icon: Icon(icon, color: AgriShieldTheme.primary, size: 20),
+        icon: Icon(icon, color: isActive ? Colors.white : AgriShieldTheme.primary, size: 20),
         tooltip: tooltip,
         padding: EdgeInsets.zero,
         onPressed: onTap,
