@@ -16,9 +16,8 @@ class FarmDetailScreen extends StatefulWidget {
   State<FarmDetailScreen> createState() => _FarmDetailScreenState();
 }
 
-class _FarmDetailScreenState extends State<FarmDetailScreen> with TickerProviderStateMixin {
+class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  late AnimationController _wheelController;
   final ApiClient _apiClient = ApiClient();
 
   late Map<String, dynamic> _farmData;
@@ -37,10 +36,6 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with TickerProvider
     super.initState();
     _farmData = Map<String, dynamic>.from(widget.farm);
     _tabController = TabController(length: 4, vsync: this);
-    _wheelController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat();
     _fetchWeather();
     _fetchFarmDetails();
     _fetchAiInsights();
@@ -238,7 +233,6 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with TickerProvider
   @override
   void dispose() {
     _tabController.dispose();
-    _wheelController.dispose();
     super.dispose();
   }
 
@@ -264,9 +258,11 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with TickerProvider
                   '$farmName • $cropDisplayName',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AgriShieldTheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, shadows: [
+                    Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 1)),
+                  ]),
                 ),
-                background: _buildAnimatedFarmScenery(),
+                background: _buildFarmHeaderImage(),
               ),
               bottom: TabBar(
                 controller: _tabController,
@@ -1510,235 +1506,61 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with TickerProvider
     );
   }
 
-  Widget _buildAnimatedFarmScenery() {
-    final now = DateTime.now();
-    final hour = now.hour;
-    final isDay = hour >= 6 && hour < 18;
+  Widget _buildFarmHeaderImage() {
+    final rawCrop = (widget.farm['crop'] ?? _farmData['crop'])?.toString().trim().toLowerCase() ?? '';
+    final isUnsown = rawCrop.isEmpty || rawCrop == 'unsown' || rawCrop == 'fallow' || rawCrop == 'none';
 
-    // Sky colors based on time of day
-    final List<Color> skyGradient = isDay
-        ? [const Color(0xFF64B5F6), const Color(0xFFBBDEFB), const Color(0xFFE8F5E9)]
-        : [const Color(0xFF0D1B2A), const Color(0xFF1B263B), const Color(0xFF415A77)];
+    final String photoUrl;
+    if (isUnsown) {
+      photoUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80';
+    } else if (rawCrop.contains('wheat') || rawCrop.contains('gehun')) {
+      photoUrl = 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=80';
+    } else if (rawCrop.contains('soy') || rawCrop.contains('bean')) {
+      photoUrl = 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1200&q=80';
+    } else if (rawCrop.contains('rice') || rawCrop.contains('paddy') || rawCrop.contains('dhan')) {
+      photoUrl = 'https://images.unsplash.com/photo-1536766820879-059fec98ec0a?auto=format&fit=crop&w=1200&q=80';
+    } else if (rawCrop.contains('cotton') || rawCrop.contains('kapas')) {
+      photoUrl = 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?auto=format&fit=crop&w=1200&q=80';
+    } else {
+      photoUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80';
+    }
 
-    return ClipRect(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Sky gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: skyGradient,
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          photoUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: AgriShieldTheme.primaryContainer,
+            child: const Center(
+              child: Icon(Icons.landscape, size: 64, color: AgriShieldTheme.primary),
             ),
           ),
-
-          // Sun or Moon depending on time of day
-          Positioned(
-            top: 28,
-            right: 42,
-            child: isDay
-                ? Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFFFFD54F),
-                      boxShadow: [
-                        BoxShadow(color: Colors.amber.withValues(alpha: 0.6), blurRadius: 18, spreadRadius: 4),
-                      ],
-                    ),
-                  )
-                : Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFFECEFF1),
-                      boxShadow: [
-                        BoxShadow(color: Colors.white.withValues(alpha: 0.5), blurRadius: 14, spreadRadius: 2),
-                      ],
-                    ),
-                    child: const Icon(Icons.nightlight_round, color: Color(0xFFCFD8DC), size: 26),
-                  ),
-          ),
-
-          // Rolling green hills in the distance
-          Positioned(
-            bottom: 40,
-            left: -30,
-            right: -30,
-            child: Container(
-              height: 70,
-              decoration: BoxDecoration(
-                color: isDay ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32),
-                borderRadius: const BorderRadius.vertical(top: Radius.elliptical(320, 60)),
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              color: AgriShieldTheme.surfaceVariant,
+              child: const Center(
+                child: CircularProgressIndicator(color: AgriShieldTheme.primary),
               ),
-            ),
-          ),
-
-          // Foreground lush green field
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: isDay ? const Color(0xFF388E3C) : const Color(0xFF1B5E20),
-                borderRadius: const BorderRadius.vertical(top: Radius.elliptical(400, 35)),
-              ),
-            ),
-          ),
-
-          // Static Farmer with Plow & Tractor with Rotating Wheels
-          Positioned(
-            bottom: 12,
-            left: 20,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Static Farmer with traditional plow
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text('👨‍🌾 Farmer', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(height: 2),
-                    // Farmer silhouette / icon
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.person, color: Color(0xFFFFE0B2), size: 30),
-                        SizedBox(width: 2),
-                        Icon(Icons.agriculture, color: Color(0xFFD7CCC8), size: 20), // Plow
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 14),
-
-                // Tractor with rotating wheels
-                Stack(
-                  alignment: Alignment.bottomLeft,
-                  children: [
-                    // Tractor Body & Cabin
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 14, left: 6),
-                      child: Container(
-                        width: 58,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD32F2F), // Classic red tractor
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            topRight: Radius.circular(4),
-                          ),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4),
-                          ],
-                        ),
-                        child: Stack(
-                          children: [
-                            // Cabin window
-                            Positioned(
-                              top: 4,
-                              left: 6,
-                              child: Container(
-                                width: 16,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: Colors.lightBlue.shade100,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                            // Exhaust pipe
-                            Positioned(
-                              top: 2,
-                              right: 8,
-                              child: Container(
-                                width: 3,
-                                height: 8,
-                                color: Colors.grey.shade900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Rotating Wheels Row
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Big Rear Tractor Wheel (Rotating)
-                          RotationTransition(
-                            turns: _wheelController,
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xFF212121),
-                                border: Border.all(color: const Color(0xFFFFD54F), width: 2),
-                              ),
-                              child: const Center(
-                                child: Icon(Icons.settings, color: Colors.amber, size: 20),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          // Small Front Tractor Wheel (Rotating)
-                          RotationTransition(
-                            turns: _wheelController,
-                            child: Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xFF212121),
-                                border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
-                              ),
-                              child: const Center(
-                                child: Icon(Icons.settings, color: Colors.amber, size: 12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+            );
+          },
+        ),
+        // Gradient overlay for high-contrast header text
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.25),
+                Colors.black.withValues(alpha: 0.65),
               ],
             ),
           ),
-
-          // Bottom gradient overlay for legible titles
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.35)],
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

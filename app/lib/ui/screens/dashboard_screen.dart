@@ -606,132 +606,65 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final cropStr = (rawCrop ?? '').toString().trim().toLowerCase();
     final bool isUnsown = cropStr.isEmpty || cropStr == 'unsown' || cropStr == 'fallow' || cropStr == 'none';
 
+    // High quality Unsplash agriculture photos
+    final String imageUrl;
     if (isUnsown) {
-      // Empty Field Vector Illustration
-      return Container(
+      // Barren / freshly plowed fertile soil field
+      imageUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=300&q=80';
+    } else if (cropStr.contains('wheat') || cropStr.contains('gehun')) {
+      // Golden wheat field
+      imageUrl = 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=300&q=80';
+    } else if (cropStr.contains('soy') || cropStr.contains('bean')) {
+      // Green soybean plantation
+      imageUrl = 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=300&q=80';
+    } else if (cropStr.contains('rice') || cropStr.contains('paddy') || cropStr.contains('dhan')) {
+      // Lush green rice paddy terrace
+      imageUrl = 'https://images.unsplash.com/photo-1536766820879-059fec98ec0a?auto=format&fit=crop&w=300&q=80';
+    } else if (cropStr.contains('cotton') || cropStr.contains('kapas')) {
+      // Cotton harvest field
+      imageUrl = 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?auto=format&fit=crop&w=300&q=80';
+    } else if (cropStr.contains('maize') || cropStr.contains('corn') || cropStr.contains('makka')) {
+      // Golden maize corn field
+      imageUrl = 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?auto=format&fit=crop&w=300&q=80';
+    } else {
+      // General lush farmland
+      imageUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=300&q=80';
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        imageUrl,
         width: 68,
         height: 68,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.amber.shade100, Colors.orange.shade50],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: Colors.orange.shade200, width: 1.2),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned(
-              bottom: 4,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(4, (i) => Container(
-                  width: 10,
-                  height: 3,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.brown.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                )),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: 68,
+            height: 68,
+            color: AgriShieldTheme.surfaceVariant,
+            child: Icon(
+              isUnsown ? Icons.landscape : Icons.grass,
+              color: AgriShieldTheme.primary,
+              size: 28,
+            ),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            width: 68,
+            height: 68,
+            color: AgriShieldTheme.surfaceVariant,
+            child: const Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AgriShieldTheme.primary),
               ),
             ),
-            Icon(Icons.terrain, color: Colors.brown.shade400, size: 30),
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade400,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Determine tailored vector colors and icon per crop
-    Color bgStart;
-    Color bgEnd;
-    Color iconColor;
-    IconData icon;
-    String badge;
-
-    if (cropStr.contains('wheat') || cropStr.contains('gehun')) {
-      bgStart = const Color(0xFFFFF8E1);
-      bgEnd = const Color(0xFFFFECB3);
-      iconColor = const Color(0xFFF57F17);
-      icon = Icons.grass;
-      badge = '🌾';
-    } else if (cropStr.contains('soy') || cropStr.contains('bean')) {
-      bgStart = const Color(0xFFE8F5E9);
-      bgEnd = const Color(0xFFC8E6C9);
-      iconColor = const Color(0xFF2E7D32);
-      icon = Icons.eco;
-      badge = '🌱';
-    } else if (cropStr.contains('rice') || cropStr.contains('paddy') || cropStr.contains('dhan')) {
-      bgStart = const Color(0xFFE0F7FA);
-      bgEnd = const Color(0xFFB2EBF2);
-      iconColor = const Color(0xFF00838F);
-      icon = Icons.water_drop;
-      badge = '🌾';
-    } else if (cropStr.contains('cotton') || cropStr.contains('kapas')) {
-      bgStart = const Color(0xFFF3E5F5);
-      bgEnd = const Color(0xFFE1BEE7);
-      iconColor = const Color(0xFF6A1B9A);
-      icon = Icons.cloud;
-      badge = '☁️';
-    } else if (cropStr.contains('maize') || cropStr.contains('corn') || cropStr.contains('makka')) {
-      bgStart = const Color(0xFFFFFDE7);
-      bgEnd = const Color(0xFFFFF9C4);
-      iconColor = const Color(0xFFFBC02D);
-      icon = Icons.grain;
-      badge = '🌽';
-    } else {
-      bgStart = const Color(0xFFE8F5E9);
-      bgEnd = const Color(0xFFDCEDC8);
-      iconColor = const Color(0xFF33691E);
-      icon = Icons.park;
-      badge = '🌿';
-    }
-
-    return Container(
-      width: 68,
-      height: 68,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [bgStart, bgEnd],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: iconColor.withValues(alpha: 0.25), width: 1.2),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            top: 4,
-            left: 6,
-            child: Text(badge, style: const TextStyle(fontSize: 14)),
-          ),
-          Icon(icon, color: iconColor, size: 32),
-          Positioned(
-            bottom: 3,
-            child: Container(
-              width: 38,
-              height: 4,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
