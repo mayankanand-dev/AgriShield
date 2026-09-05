@@ -16,6 +16,7 @@ router = APIRouter()
 
 class RegisterOrLoginRequest(BaseModel):
     phone: str
+    name: str = None
 
 class AdminLoginRequest(BaseModel):
     email: str
@@ -82,7 +83,8 @@ async def register_or_login(req: RegisterOrLoginRequest, db: AsyncSession = Depe
     is_new_user = False
     if not user:
         # Create new farmer
-        user = User(phone=req.phone, role=UserRole.FARMER)
+        farmer_name = req.name.strip() if req.name and req.name.strip() else (f"Farmer {req.phone[-4:]}" if len(req.phone) >= 4 else "Farmer")
+        user = User(phone=req.phone, name=farmer_name, role=UserRole.FARMER)
         db.add(user)
         await db.flush()
         is_new_user = True
@@ -91,11 +93,21 @@ async def register_or_login(req: RegisterOrLoginRequest, db: AsyncSession = Depe
         from db.models import Notification, NotificationType
         welcome_notif = Notification(
             user_id=user.id,
-            type=NotificationType.POLICY_STATUS, # Reusing this type for now
-            message="Welcome to AgriShield! Please add your farm to get started."
+            type=NotificationType.POLICY_STATUS,
+            message=f"Welcome to AgriShield, {farmer_name}! Please add your farm to get started."
         )
         db.add(welcome_notif)
         await db.commit()
+    else:
+        # If existing user has no name and name is provided or empty, give valid name
+        if req.name and req.name.strip():
+            user.name = req.name.strip()
+            await db.commit()
+            await db.refresh(user)
+        elif not user.name:
+            user.name = f"Farmer {user.phone[-4:]}" if user.phone and len(user.phone) >= 4 else "Farmer"
+            await db.commit()
+            await db.refresh(user)
         
     user_id_str = str(user.id)
     access_token = create_access_token(user_id_str)
@@ -136,7 +148,12 @@ async def admin_login(req: AdminLoginRequest, db: AsyncSession = Depends(get_db)
 
 
 @router.get("/me")
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if not current_user.name:
+        current_user.name = f"Farmer {current_user.phone[-4:]}" if current_user.phone and len(current_user.phone) >= 4 else "Farmer"
+        await db.commit()
+        await db.refresh(current_user)
+
     return _ok({
         "id": str(current_user.id),
         "phone": current_user.phone,
