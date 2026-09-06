@@ -455,7 +455,55 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
               ]
             ],
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 24),
+          
+          // Claim Verification Fee Breakdown
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AgriShieldTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AgriShieldTheme.surfaceVariant),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.bolt, size: 18, color: AgriShieldTheme.primary),
+                        SizedBox(width: 8),
+                        Text(
+                          'AI Claim Verification Fee',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AgriShieldTheme.onSurface),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Text(
+                        '₹180 (Covered)',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Automated Sentinel-2 NDVI spectral loss scoring + computer vision damage audit. 100% covered by the insurer under PMFBY (₹0 farmer out-of-pocket).',
+                  style: TextStyle(fontSize: 11, color: AgriShieldTheme.onSurfaceVariant, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           
           // Submit
           ElevatedButton(

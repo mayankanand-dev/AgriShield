@@ -501,6 +501,12 @@ class _InsuranceQuoteScreenState extends ConsumerState<InsuranceQuoteScreen> {
                             color: const Color(0xFF2E7D32),
                             isBold: true,
                           ),
+                          const SizedBox(height: 12),
+                          _buildBreakdownRow(
+                            'AgriShield Platform Fee (1.75%)',
+                            '₹${(grossPremium * 0.0175).toStringAsFixed(0)} (Covered)',
+                            color: AgriShieldTheme.primary,
+                          ),
                           const SizedBox(height: 16),
                           const Divider(height: 1),
                           const SizedBox(height: 16),
@@ -526,7 +532,7 @@ class _InsuranceQuoteScreenState extends ConsumerState<InsuranceQuoteScreen> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    'Government of India and MP State Government pay ₹${govtSubsidy.toStringAsFixed(0)} in direct premium subsidies for this plot.',
+                                    'Government pays ₹${govtSubsidy.toStringAsFixed(0)} in premium subsidies. AgriShield Platform Fee (1.75% = ₹${(grossPremium * 0.0175).toStringAsFixed(0)}) is covered by the insurer under PMFBY.',
                                     style: const TextStyle(fontSize: 12, color: Color(0xFF1B5E20), height: 1.4),
                                   ),
                                 ),
