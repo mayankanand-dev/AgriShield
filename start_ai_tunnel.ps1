@@ -1,3 +1,7 @@
+param(
+    [switch]$NonInteractive
+)
+
 # AgriShield AI & Ngrok Tunnel Launcher
 $ErrorActionPreference = "Continue"
 
@@ -94,6 +98,8 @@ if ($PublicUrl) {
     Write-Host "    Check http://127.0.0.1:4040 in your browser." -ForegroundColor Yellow
 }
 Write-Host "==================================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "Press Enter to exit this launcher (services stay running in background)..."
-Read-Host
+if (-not $NonInteractive) {
+    Write-Host ""
+    Write-Host "Press Enter to exit this launcher (services stay running in background)..."
+    Read-Host
+}
