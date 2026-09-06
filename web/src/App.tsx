@@ -9,6 +9,7 @@ import Claims from './pages/Claims';
 import Policies from './pages/Policies';
 import Verification from './pages/Verification';
 import Reports from './pages/Reports';
+import Revenue from './pages/Revenue';
 import Profile from './pages/Profile';
 import Register from './pages/Register';
 
@@ -27,6 +28,7 @@ function App() {
           <Route path="/farms-map" element={<FarmsMap />} />
           <Route path="/policies" element={<Policies />} />
           <Route path="/claims" element={<Claims />} />
+          <Route path="/revenue" element={<Revenue />} />
           <Route path="/verification" element={<Verification />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/profile" element={<Profile />} />

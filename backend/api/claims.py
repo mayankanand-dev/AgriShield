@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from db.session import get_db
 from db.models import Claim, ClaimStatus, ClaimEventType, Farm, User, UserRole, Notification, NotificationType, InsurancePolicy
+from geoalchemy2.shape import to_shape
 from services.blockchain_service import generate_tamper_proof_hash, record_hash_on_chain
 from services.ai_client import get_ai_client
 from api.auth import get_current_user, get_admin_user, _ok, _error
@@ -49,6 +50,7 @@ def _serialize_claim(c: Claim, include_farmer: bool = False):
 
 @router.get("")
 async def list_claims(
+    farm_id: Optional[str] = None,
     page: int = 1, 
     page_size: int = 50, 
     db: AsyncSession = Depends(get_db),
@@ -59,6 +61,12 @@ async def list_claims(
     
     if current_user.role != UserRole.ADMIN:
         query = query.where(Claim.user_id == current_user.id)
+
+    if farm_id:
+        try:
+            query = query.where(Claim.farm_id == uuid.UUID(farm_id))
+        except (ValueError, TypeError):
+            pass
         
     query = query.limit(page_size).offset(offset)
     result = await db.execute(query)
@@ -113,6 +121,66 @@ async def create_claim(
         
     if not farm and target_farm_id:
         farm = await db.get(Farm, target_farm_id)
+
+    # 1. Farm-Specific Duplicate & Approval Restriction:
+    # Ensure this specific farm doesn't already have an approved or active claim.
+    # Other separate farms owned by the same farmer remain eligible to file claims.
+    if target_farm_id:
+        existing_claims_stmt = select(Claim).where(Claim.farm_id == target_farm_id)
+        res_existing = await db.execute(existing_claims_stmt)
+        existing_claims = res_existing.scalars().all()
+        for ec in existing_claims:
+            if ec.status == ClaimStatus.APPROVED:
+                return _error(
+                    "CLAIM_ALREADY_APPROVED",
+                    f"A claim for this farm has already been approved and settled (Claim #{str(ec.id)[:8]}). Under PMFBY guidelines, multiple claims cannot be filed for an already settled policy on the same crop parcel. (You may still file claims for your other farms).",
+                    400
+                )
+            elif ec.status in (ClaimStatus.SUBMITTED, ClaimStatus.AI_ASSESSED, ClaimStatus.UNDER_REVIEW):
+                return _error(
+                    "CLAIM_ALREADY_ACTIVE",
+                    f"An active claim (Claim #{str(ec.id)[:8]}) is already being processed for this farm. Multiple submissions for the same crop parcel are restricted while a claim is under review.",
+                    400
+                )
+
+    # 2. Geospatial Land Boundary De-duplication (Cross-Farmer Fraud Prevention):
+    # Prevent another farmer or duplicate account from claiming insurance on an overlapping boundary.
+    if farm and farm.boundary is not None:
+        try:
+            current_farm_shape = to_shape(farm.boundary)
+            # Query all active or approved claims on other farms
+            other_claims_stmt = select(Claim).where(
+                Claim.farm_id != target_farm_id,
+                Claim.status.in_([
+                    ClaimStatus.APPROVED,
+                    ClaimStatus.SUBMITTED,
+                    ClaimStatus.AI_ASSESSED,
+                    ClaimStatus.UNDER_REVIEW
+                ])
+            )
+            res_other = await db.execute(other_claims_stmt)
+            other_claims = res_other.scalars().all()
+
+            checked_farm_ids = set()
+            for oc in other_claims:
+                if not oc.farm_id or oc.farm_id in checked_farm_ids:
+                    continue
+                checked_farm_ids.add(oc.farm_id)
+                other_farm = await db.get(Farm, oc.farm_id)
+                if other_farm and other_farm.boundary is not None:
+                    other_shape = to_shape(other_farm.boundary)
+                    if current_farm_shape.intersects(other_shape):
+                        intersection = current_farm_shape.intersection(other_shape)
+                        overlap_ratio = intersection.area / max(current_farm_shape.area, 1e-9)
+                        if overlap_ratio > 0.10:
+                            status_label = "approved" if oc.status == ClaimStatus.APPROVED else "currently in review"
+                            return _error(
+                                "LAND_BOUNDARY_ALREADY_CLAIMED",
+                                f"Geospatial Fraud Prevention: This land parcel overlaps ({overlap_ratio * 100:.1f}%) with an existing claim on record ({status_label}) for land parcel '{other_farm.name}'. Under PMFBY regulations, duplicate insurance claims across overlapping land boundaries are strictly prohibited.",
+                                400
+                            )
+        except Exception:
+            pass
 
     evidence_uuids = []
     for eid in req.evidence_ids:

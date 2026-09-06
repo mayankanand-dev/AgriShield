@@ -58,3 +58,12 @@ final claimRepositoryProvider = Provider<ClaimRepository>((ref) {
   // Change to ApiClaimRepository in production
   return ApiClaimRepository();
 });
+
+final claimsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final client = ApiClient();
+  final response = await client.get<List<dynamic>>('/claims', (json) => json as List<dynamic>);
+  if (response.success && response.data != null) {
+    return response.data!.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+  return [];
+});

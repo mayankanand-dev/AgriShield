@@ -6,6 +6,7 @@ import 'crop_photo_scan_screen.dart';
 import 'soil_report_screen.dart';
 import 'insurance_quote_screen.dart';
 import 'file_claim_screen.dart';
+import 'claim_timeline_screen.dart';
 
 class FarmDetailScreen extends StatefulWidget {
   final Map<String, dynamic> farm;
@@ -26,6 +27,8 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
   Map<String, dynamic>? _advisoryData;
   Map<String, dynamic>? _riskData;
   Map<String, dynamic>? _revenueData;
+  List<Map<String, dynamic>> _farmClaims = [];
+  bool _isLoadingClaims = false;
   bool _isLoadingWeather = true;
   bool _isLoadingAi = false;
   bool _isLoadingRevenue = false;
@@ -40,6 +43,27 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
     _fetchFarmDetails();
     _fetchAiInsights();
     _fetchRevenue();
+    _fetchClaims();
+  }
+
+  Future<void> _fetchClaims() async {
+    final farmId = widget.farm['id'];
+    if (farmId == null) return;
+    setState(() => _isLoadingClaims = true);
+    try {
+      final res = await _apiClient.get<List<dynamic>>(
+        '/claims?farm_id=$farmId',
+        (json) => json as List<dynamic>,
+      );
+      if (res.success && res.data != null && mounted) {
+        setState(() {
+          _farmClaims = res.data!.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _isLoadingClaims = false;
+        });
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isLoadingClaims = false);
   }
 
   Future<void> _fetchRevenue() async {
@@ -305,6 +329,12 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Per-crop Claim Status Banner (if claim filed for this parcel)
+        if (_farmClaims.isNotEmpty) ...[
+          _buildActiveClaimBanner(_farmClaims.first),
+          const SizedBox(height: 16),
+        ],
+
         // Crop Health Card
         Container(
           padding: const EdgeInsets.all(20),
@@ -1374,23 +1404,8 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
           ),
           const SizedBox(height: 20),
 
-          // File Claim Button
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => FileClaimScreen(
-                policyId: activePolicy['id']?.toString(),
-                farmId: _farmData['id']?.toString(),
-              )));
-            },
-            icon: const Icon(Icons.report_problem_outlined),
-            label: const Text('File Disaster Claim Against Policy', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AgriShieldTheme.secondaryContainer,
-              foregroundColor: AgriShieldTheme.onSecondaryContainer,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-          ),
+          // Claims Section for this Plot (Status, Timeline, Fraud Prevention)
+          _buildClaimsSection(activePolicy),
         ],
       );
     }
@@ -1468,6 +1483,275 @@ class _FarmDetailScreenState extends State<FarmDetailScreen> with SingleTickerPr
           child: const Text('Get Instant Quote & Buy Protection', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         ),
       ],
+    );
+  }
+
+  Widget _buildActiveClaimBanner(Map<String, dynamic> claim) {
+    final status = (claim['status'] ?? 'SUBMITTED').toString().toUpperCase();
+    final isApproved = status == 'APPROVED';
+    final isReviewing = status == 'UNDER_REVIEW' || status == 'AI_ASSESSED' || status == 'SUBMITTED';
+    final claimId = claim['id']?.toString() ?? '';
+    final shortId = claimId.length > 8 ? claimId.substring(0, 8).toUpperCase() : claimId.toUpperCase();
+    final eventType = (claim['event_type'] ?? 'Disaster').toString().toUpperCase();
+    
+    final bg = isApproved ? Colors.green.shade50 : (isReviewing ? Colors.amber.shade50 : Colors.red.shade50);
+    final border = isApproved ? Colors.green.shade300 : (isReviewing ? Colors.amber.shade400 : Colors.red.shade300);
+    final textColor = isApproved ? Colors.green.shade900 : (isReviewing ? Colors.amber.shade900 : Colors.red.shade900);
+    final iconColor = isApproved ? Colors.green.shade700 : (isReviewing ? Colors.amber.shade800 : Colors.red.shade700);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border, width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(isApproved ? Icons.verified : Icons.hourglass_top, color: iconColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    isApproved ? 'Crop Claim Approved' : 'Active Damage Claim',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isApproved ? Colors.green.shade200 : Colors.amber.shade200,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  status.replaceAll('_', ' '),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Claim #$shortId • Event: $eventType • Filed on ${claim['incident_date'] ?? 'Recent'}',
+            style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ClaimTimelineScreen(
+                      claimId: claimId,
+                      farmId: widget.farm['id']?.toString(),
+                      cropName: _farmData['crop'],
+                      farmName: _farmData['name'],
+                      initialClaim: claim,
+                    ),
+                  ),
+                ).then((_) => _fetchClaims());
+              },
+              icon: const Icon(Icons.timeline, size: 16),
+              label: Text(isApproved ? 'View Settlement & Blockchain Proof' : 'Track Claim Live Status'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isApproved ? AgriShieldTheme.primary : AgriShieldTheme.secondaryContainer,
+                foregroundColor: isApproved ? Colors.white : AgriShieldTheme.onSecondaryContainer,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClaimsSection(Map<String, dynamic> activePolicy) {
+    if (_isLoadingClaims) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    if (_farmClaims.isEmpty) {
+      return ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => FileClaimScreen(
+            policyId: activePolicy['id']?.toString(),
+            farmId: _farmData['id']?.toString(),
+          ))).then((_) => _fetchClaims());
+        },
+        icon: const Icon(Icons.report_problem_outlined),
+        label: const Text('File Disaster Claim Against Policy', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AgriShieldTheme.secondaryContainer,
+          foregroundColor: AgriShieldTheme.onSecondaryContainer,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      );
+    }
+
+    final latestClaim = _farmClaims.first;
+    final status = (latestClaim['status'] ?? '').toString().toUpperCase();
+    final isApproved = status == 'APPROVED';
+    final isReviewing = status == 'UNDER_REVIEW' || status == 'AI_ASSESSED' || status == 'SUBMITTED';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AgriShieldTheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isApproved ? Colors.green.shade400 : (isReviewing ? Colors.amber.shade400 : AgriShieldTheme.surfaceVariant),
+          width: 1.5,
+        ),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isApproved ? Icons.verified_user : Icons.pending_actions,
+                    color: isApproved ? Colors.green.shade700 : Colors.amber.shade800,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Parcel Claim Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isApproved ? Colors.green.shade100 : Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status.replaceAll('_', ' '),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isApproved ? Colors.green.shade800 : Colors.amber.shade900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Claim ID: #${latestClaim['id']?.toString().substring(0, 8).toUpperCase() ?? ''}',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, fontFamily: 'monospace'),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Incident: ${(latestClaim['event_type'] ?? 'Crop Damage').toString().toUpperCase()} • Reported: ${latestClaim['incident_date'] ?? 'N/A'}',
+            style: const TextStyle(fontSize: 12, color: AgriShieldTheme.onSurfaceVariant),
+          ),
+          if (latestClaim['ai_damage_assessment'] != null && latestClaim['ai_damage_assessment'] is Map) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AgriShieldTheme.surfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('AI Damage Assessed:', style: TextStyle(fontSize: 12)),
+                  Text(
+                    '${((latestClaim['ai_damage_assessment'] as Map)['damage_percentage'] ?? 0)}% Severity',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AgriShieldTheme.error),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          if (isApproved) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.green.shade800),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Claim finalized and settled. Further claims for this parcel are locked to prevent duplicate PMFBY payouts.',
+                      style: TextStyle(fontSize: 11, color: Colors.green.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ] else if (isReviewing) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lock_clock, size: 16, color: Colors.amber.shade800),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Assessment under review. Multiple filings on this parcel are restricted while pending.',
+                      style: TextStyle(fontSize: 11, color: Colors.amber.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ClaimTimelineScreen(
+                      claimId: latestClaim['id']?.toString(),
+                      farmId: widget.farm['id']?.toString(),
+                      cropName: _farmData['crop'],
+                      farmName: _farmData['name'],
+                      initialClaim: latestClaim,
+                    ),
+                  ),
+                ).then((_) => _fetchClaims());
+              },
+              icon: const Icon(Icons.fact_check_outlined, size: 18),
+              label: Text(isApproved ? 'View Settlement & Blockchain Proof' : 'View Claim Timeline & AI Audit'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AgriShieldTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

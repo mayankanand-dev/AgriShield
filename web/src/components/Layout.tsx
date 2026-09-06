@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, Navigate } from "react-router-dom";
-import { LayoutDashboard, Users, Map, FileText, FileSearch, ShieldCheck, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Map, FileText, FileSearch, ShieldCheck, BarChart3, TrendingUp } from 'lucide-react';
 
 import TopHeader from './TopHeader';
 
@@ -9,6 +9,7 @@ const navItems = [
   { path: "/farms-map", label: "Farms Map", icon: Map },
   { path: "/policies", label: "Policies", icon: FileText },
   { path: "/claims", label: "Claims", icon: FileSearch },
+  { path: "/revenue", label: "Revenue & Viability", icon: TrendingUp },
   { path: "/verification", label: "Verification", icon: ShieldCheck },
   { path: "/reports", label: "Reports", icon: BarChart3 },
 ];

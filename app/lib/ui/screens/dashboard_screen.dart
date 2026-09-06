@@ -9,6 +9,7 @@ import 'insurance_quote_screen.dart';
 import 'crop_photo_scan_screen.dart';
 import 'soil_report_screen.dart';
 import 'file_claim_screen.dart';
+import 'claim_timeline_screen.dart';
 
 import 'dart:async';
 
@@ -28,6 +29,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       ref.invalidate(farmsProvider);
       ref.invalidate(userProvider);
+      ref.invalidate(claimsProvider);
     });
   }
 
@@ -110,6 +112,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ref.invalidate(farmsProvider);
               ref.invalidate(userProvider);
               ref.invalidate(weatherProvider);
+              ref.invalidate(claimsProvider);
             },
             color: AgriShieldTheme.primary,
             child: ListView(
@@ -526,6 +529,94 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Divider(height: 1, color: AgriShieldTheme.surfaceVariant),
+                    
+                    // Claim Status Pill (if filed for this farm)
+                    () {
+                      final claimsAsync = ref.watch(claimsProvider);
+                      Map<String, dynamic>? farmClaim;
+                      claimsAsync.whenData((claims) {
+                        for (final c in claims) {
+                          if (c['farm_id']?.toString() == farm['id']?.toString()) {
+                            farmClaim = c;
+                            break;
+                          }
+                        }
+                      });
+
+                      if (farmClaim == null) return const SizedBox.shrink();
+
+                      final claimStatus = (farmClaim!['status'] ?? '').toString().toUpperCase();
+                      final isClaimApproved = claimStatus == 'APPROVED';
+                      final claimShortId = (farmClaim!['id']?.toString() ?? '').substring(0, 6).toUpperCase();
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ClaimTimelineScreen(
+                                  claimId: farmClaim!['id']?.toString(),
+                                  farmId: farm['id']?.toString(),
+                                  cropName: farm['crop'],
+                                  farmName: farm['name'],
+                                  initialClaim: farmClaim,
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isClaimApproved ? Colors.green.shade50 : Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isClaimApproved ? Colors.green.shade300 : Colors.amber.shade400,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isClaimApproved ? Icons.verified : Icons.pending_actions,
+                                  size: 16,
+                                  color: isClaimApproved ? Colors.green.shade800 : Colors.amber.shade900,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    isClaimApproved
+                                        ? 'PMFBY Claim Settled (#$claimShortId)'
+                                        : 'Claim Under Review (#$claimShortId)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isClaimApproved ? Colors.green.shade900 : Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'Track',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isClaimApproved ? Colors.green.shade800 : Colors.amber.shade900,
+                                  ),
+                                ),
+                                const SizedBox(width: 2),
+                                Icon(
+                                  Icons.chevron_right,
+                                  size: 14,
+                                  color: isClaimApproved ? Colors.green.shade800 : Colors.amber.shade900,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }(),
+
                     const SizedBox(height: 12),
                     // Bottom Row
                     Row(

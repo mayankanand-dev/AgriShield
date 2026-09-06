@@ -6,6 +6,7 @@ import 'dart:io';
 import '../../theme.dart';
 import '../../providers.dart';
 import '../../api/api_client.dart';
+import 'claim_timeline_screen.dart';
 
 class FileClaimScreen extends ConsumerStatefulWidget {
   final String? policyId;
@@ -101,6 +102,33 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
   @override
   Widget build(BuildContext context) {
     final farmsAsync = ref.watch(farmsProvider);
+    final claimsAsync = ref.watch(claimsProvider);
+
+    // Evaluate claim locking for currently selected farm
+    Map<String, dynamic>? existingClaimForFarm;
+    bool isApproved = false;
+    bool isFarmClaimLocked = false;
+
+    claimsAsync.whenData((claims) {
+      if (_selectedFarmId != null) {
+        for (final c in claims) {
+          if (c['farm_id']?.toString() == _selectedFarmId) {
+            final st = (c['status'] ?? '').toString().toUpperCase();
+            if (st == 'APPROVED') {
+              existingClaimForFarm = c;
+              isApproved = true;
+              isFarmClaimLocked = true;
+              break;
+            } else if (st == 'SUBMITTED' || st == 'AI_ASSESSED' || st == 'UNDER_REVIEW') {
+              existingClaimForFarm = c;
+              isApproved = false;
+              isFarmClaimLocked = true;
+              break;
+            }
+          }
+        }
+      }
+    });
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -227,6 +255,95 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
               );
             },
           ),
+
+          if (isFarmClaimLocked && existingClaimForFarm != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isApproved ? Colors.green.shade50 : Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isApproved ? Colors.green.shade300 : Colors.amber.shade400,
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isApproved ? Icons.verified : Icons.hourglass_top,
+                        color: isApproved ? Colors.green.shade800 : Colors.amber.shade900,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isApproved 
+                              ? 'Claim Settled & Approved for this Plot' 
+                              : 'Claim Already in Review for this Plot',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: isApproved ? Colors.green.shade900 : Colors.amber.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isApproved
+                        ? 'Under PMFBY guidelines, multiple claims cannot be filed for an already approved/settled policy on the same crop parcel. (You can still select and file claims for your other farms).'
+                        : 'An insurance claim (Claim #${existingClaimForFarm!['id'].toString().substring(0, 8).toUpperCase()}) is currently being assessed. Multiple submissions on the same parcel are restricted while a review is pending.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isApproved ? Colors.green.shade900 : Colors.amber.shade900,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ClaimTimelineScreen(
+                              initialClaim: existingClaimForFarm,
+                              claimId: existingClaimForFarm!['id']?.toString(),
+                              farmId: _selectedFarmId,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: Icon(
+                        isApproved ? Icons.receipt_long : Icons.timeline,
+                        size: 16,
+                        color: isApproved ? Colors.green.shade800 : Colors.amber.shade900,
+                      ),
+                      label: Text(
+                        isApproved ? 'View Claim Settlement Receipt' : 'Track Active Claim Timeline',
+                        style: TextStyle(
+                          color: isApproved ? Colors.green.shade800 : Colors.amber.shade900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isApproved ? Colors.green.shade400 : Colors.amber.shade500,
+                        ),
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           
           // Incident Type
@@ -342,7 +459,7 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
           
           // Submit
           ElevatedButton(
-            onPressed: _isSubmitting || _evidenceFiles.length < 2 ? null : () async {
+            onPressed: _isSubmitting || isFarmClaimLocked || _evidenceFiles.length < 2 ? null : () async {
               setState(() => _isSubmitting = true);
               
               // 1. Upload files first
@@ -403,28 +520,75 @@ class _FileClaimScreenState extends ConsumerState<FileClaimScreen> {
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
+                  ref.invalidate(claimsProvider);
                   ref.invalidate(farmsProvider);
                   if (Navigator.canPop(context)) Navigator.pop(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed: ${res.error?.message ?? "Failed to submit claim"}'),
-                      backgroundColor: AgriShieldTheme.error,
-                      behavior: SnackBarBehavior.floating,
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClaimTimelineScreen(
+                        claimId: res.data?['id']?.toString(),
+                        farmId: _selectedFarmId,
+                        initialClaim: res.data,
+                      ),
                     ),
                   );
+                } else {
+                  final errCode = res.error?.code ?? '';
+                  final errMsg = res.error?.message ?? 'Failed to submit claim';
+                  
+                  if (errCode == 'CLAIM_ALREADY_APPROVED' || 
+                      errCode == 'CLAIM_ALREADY_ACTIVE' || 
+                      errCode == 'LAND_BOUNDARY_ALREADY_CLAIMED') {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: Row(
+                          children: const [
+                            Icon(Icons.shield, color: AgriShieldTheme.error),
+                            SizedBox(width: 8),
+                            Text('PMFBY Rule Alert'),
+                          ],
+                        ),
+                        content: Text(errMsg),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Understood'),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed: $errMsg'),
+                        backgroundColor: AgriShieldTheme.error,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
                 }
               }
             },
-            style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(56), 
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              backgroundColor: isFarmClaimLocked ? Colors.grey.shade400 : null,
+            ),
             child: _isSubmitting
               ? const CircularProgressIndicator(color: Colors.white)
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.send),
-                    SizedBox(width: 8),
-                    Text('Submit Claim', style: TextStyle(fontSize: 18)),
+                  children: [
+                    Icon(isFarmClaimLocked ? Icons.lock : Icons.send),
+                    const SizedBox(width: 8),
+                    Text(
+                      isFarmClaimLocked 
+                          ? (isApproved ? 'Claim Already Settled' : 'Claim In Active Review')
+                          : 'Submit Claim', 
+                      style: const TextStyle(fontSize: 18),
+                    ),
                   ],
                 ),
           ),
